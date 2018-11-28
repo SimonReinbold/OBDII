@@ -5,27 +5,21 @@
 ** Outputs and Inputs
 *********************************************************************/
 
+#include <avr/io.h>
+
 // Uncomment if Logic is not to be negated
 // For now IN and OUT are negated simultaneously
-#define NEGATE_LOGIC
+//#define NEGATE_LOGIC
 
-#define K_Line_REG DDRC
-#define K_Line_PORT PORTC
-#define K_Line_PIN PINC
-#define K_Line_OUT PC5
-#define K_Line_IN PC4
+#define K_Line_REG DDRD
+#define K_Line_PORT PORTD
+#define K_Line_PIN PIND
+#define K_Line_OUT PD4
+#define K_Line_IN PD2
 
-#define L_Line_REG DDRC
-#define L_Line_PORT PORTC
-#define L_Line_OUT PC2
-
-/*********************************************************************
-** Confirmation Values
-*********************************************************************/
-
-#define CODE_OK 0x00
-#define CODE_DATA_ERROR 0x01
-#define CODE_ERROR 0xEE
+#define L_Line_REG DDRD
+#define L_Line_PORT PORTD
+#define L_Line_OUT PD3
 
 /*********************************************************************
 ** Prescalers to write inte uc register
@@ -66,9 +60,9 @@
 **	there the value 8 stands for the TIMER0 Prescaler
 *********************************************************************/
 
-#define ms2cnt(ms) (uint16_t)((uint32_t)ms/1000*((uint32_t)MCU_XTAL/64))
+#define ms2cnt(ms) (uint16_t)((uint32_t)ms/1000*((uint32_t)F_CPU/64))
 
-#define LOAD_TIMER0_10400BAUD (uint8_t)(265-((uint32_t)MCU_XTAL/((uint32_t)10400*(uint32_t)8)))
+#define CALC_TIMER0_LOAD(bitRate) (uint8_t)(256-((uint32_t)F_CPU/((uint32_t)(bitRate)*(uint32_t)8)))
 
 /*********************************************************************
 ** Define standardized time values extracted from ISO-14230 Part 2
@@ -133,10 +127,10 @@
 ** Functions
 *********************************************************************/
 
-void obd_hardware_init(void);
-unsigned char obd_fast_init(void);
-char obd_5_baud_init(void);
-char send_data(unsigned char *data, unsigned char n_bytes);
+void wake_up();
+void obd_hardware_init();
+unsigned char send_byte(unsigned char byte, int bitRate);
+unsigned char receive_byte(int bitRate);
 
 // General
 static inline void set_high(unsigned int TMP_PORT, unsigned int TMP_PIN){
@@ -150,41 +144,60 @@ static inline void set_low(unsigned int TMP_PORT, unsigned int TMP_PIN){
 // Timers 
 static inline void timer0_start() 
 { 
+	TIMSK0 = (1 << TOIE0);  // enable timer0 ovrf interrupt
+	TIFR0 = (1 << TOIE0);  // clear timer0 ovrf interrupt flag
     TCCR0B = TIMER0_Prescaler; 
     TCNT0 = 0; 
 } 
  
 static inline void timer0_stop(void) 
 { 
+	TIMSK0 = 0;  // disable timer0 interrupts
     TCCR0B = 0x00; 
 } 
  
 static inline void timer0_set(unsigned char val) 
 { 
-	TCCR0B = TIMER0_Prescaler;
+	TIMSK0 = (1 << TOIE0);  // enable timer0 ovrf interrupt
+	TIFR0 = (1 << TOIE0);  // clear timer0 ovrf interrupt flag
 	TCNT0 = val;
+	TCCR0B = TIMER0_Prescaler;
 } 
 
 #define timer0_get() TCNT0
 
 static inline void timer1_start() 
 { 
+	TIMSK1 = (1 << TOIE1);  // enable timer1 ovrf interrupt
+	TIFR1 = (1 << TOIE1);  // clear timer1 ovrf interrupt flag
     TCCR1B = TIMER1_Prescaler; 
     TCNT1 = 0; 
 } 
  
 static inline void timer1_stop(void) 
 { 
+	TIMSK1 = 0;  // disable timer1 interrupts
     TCCR1B = 0x00; 
 } 
  
 static inline void timer1_set(unsigned int val) 
 { 
+	TIMSK1 = (1 << TOIE1);  // enable timer1 ovrf interrupt
+	TIFR1 = (1 << TOIE1);  // clear timer1 ovrf interrupt flag
+	TCNT1 = val;
 	TCCR1B = TIMER1_Prescaler;
-    TCNT1 = val; 
 } 
 
 #define timer1_get() TCNT1 
+
+static inline void enable_INT0(void){
+	EIFR = (1 << INTF0);  // clear INT0 flag   
+	EIMSK = (1 << INT0);  // enable INT0  
+}
+
+static inline void disable_INT0(void) {
+	EIMSK = 0;  // disable INT0   
+}
  
 // Communication
 #ifndef NEGATE_LOGIC
@@ -211,20 +224,15 @@ static inline void timer1_set(unsigned int val)
 ** Helper for KWP2000-Handling
 *********************************************************************/
 
-volatile struct {
-    unsigned char buffer;
-    unsigned char reload;
-    unsigned char bit_cnt;
-    unsigned char status;
-	unsigned char recieve;
-}helper;
+unsigned char incoming_byte;
 
 //#define CHECKSTATUS(status_bit) (helper.status & status_bit)
 #define CHECKSTATUS(status_bit) (helper.status & (1<<(status_bit)))
-#define SETSTATUS(status_bit) (helper.status |= status_bit)
-#define CLEARSTATUS(status_bit) (helper.status &= ~status_bit)
+#define SETSTATUS(status_bit) (helper.status |= (1<<status_bit))
+#define CLEARSTATUS(status_bit) (helper.status &= ~(1<<status_bit))
 
 #define SENDING 1
 #define BUSY 2
+#define RECEIVING 3
 
 #endif // obdCOM

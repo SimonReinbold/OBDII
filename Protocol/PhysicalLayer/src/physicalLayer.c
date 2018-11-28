@@ -7,14 +7,59 @@
 **
 **
 *********************************************************************/
-#include <avr/io.h>
+
 #include <avr/interrupt.h>
 #include <stdint.h>
 
 #include "../include/physicalLayer.h"
+#include "../../../Application/include/error_defs.h"
 
-unsigned char send_byte(unsigned char data);
+void start_Transmit();
+void start_Receive();
+
 void wait(unsigned int TMP_TIME);
+
+volatile struct {
+	unsigned char buffer;
+	unsigned char load;
+	unsigned char bit_cnt;
+	unsigned char status;
+	unsigned char recieve;
+	unsigned char error;
+	unsigned char byte_buffer;
+	int bitRate;
+}helper;
+
+void wake_up() {
+	// Wait min Idle Time
+	wait(TIME_TidleFirst);
+
+	// Wake up pattern
+	set_K_low();
+	set_L_low();
+	timer1_start();
+	while (timer1_get() < TIME_TiniL);
+	timer1_stop();
+
+	set_K_high();
+	set_L_high();
+	timer1_start();
+	while (timer1_get() < TIME_TiniH);
+	timer1_stop();
+}
+
+void start_Transmit() {
+	SETSTATUS(SENDING);
+
+	helper.error = CODE_OK;
+}
+
+void start_Receive() {
+	CLEARSTATUS(SENDING);
+	SETSTATUS(BUSY);
+
+	helper.error = CODE_OK;
+}
 
 /*********************************************************************
 ** Initialise Hardware
@@ -35,103 +80,53 @@ void obd_hardware_init(){
 }
 
 /*********************************************************************
-** Initialise Communication using "Fast Init"
-*********************************************************************/
-unsigned char obd_fast_init(){
-	// Wait min Idle Time
-	wait(TIME_TidleFirst);
-
-	// Wake up pattern
-	set_K_low();
-	set_L_low();
-	timer1_start();
-	while(timer1_get()<TIME_TiniL);
-	timer1_stop();
-
-	set_K_high();
-	set_L_high();
-	timer1_start();
-	while(timer1_get()<TIME_TiniH);
-	timer1_stop();
-
-	// Send Start Communication Request
-	//
-	//**								Functinal Addressing | Target | Source | Service ID | Checksum
-	//** Start Communication Pattern:           0xC1         |  0x33  |  0xF1  |   0x81     |   TBD
-	
-	unsigned char data[4];
-	data[0] = 0xC1;
-	data[1] = 0x33;
-	data[2] = 0xF1;
-	data[3] = 0x81;
-	
-	if(send_data(data,4) != CODE_OK){
-		return CODE_ERROR;
-	}
-	
-	// Receive Section
-	// External interrupts are already activated at the end of the TIMER0 ISR
-
-	// Maximum Waiting time is P2_MAX - Start TIMER1
-	timer1_start();
-
-	unsigned char byte_cnt = 0;
-	unsigned char msg_buffer[10]; // Filled by INT0 interrupt
-	unsigned char *msg_pointer;	// Used for parsing the received data
-	
-	return CODE_OK;
-}
-
-/*********************************************************************
-** Send message
-*********************************************************************/
-char send_data(unsigned char *data, unsigned char n_bytes){
-	if (n_bytes > 265) return CODE_DATA_ERROR;
-	
-	// Set status bit to Transmit (not Recieve)
-	SETSTATUS(SENDING);
-	// Calculate checksum while sending byte by byte
-	unsigned char checksum;
-	for (unsigned int i = 0; i < n_bytes; i++) {
-		checksum += *data;
-		send_byte(*data++);
-		// Halt programm until byte is send
-		while (CHECKSTATUS(BUSY));
-	}
-	// Send last byte - checksum
-	send_byte(checksum);
-	
-	// Halt programm until byte is send
-	while (CHECKSTATUS(BUSY));
-	CLEARSTATUS(SENDING);
-	
-	return CODE_OK;
-}
-
-/*********************************************************************
 ** Send byte
 ** TIMER0 is used to time bit lengths
 **
 ** First bit is send in this method
 ** Further bits are send in TIMER0 Interrupt
 *********************************************************************/
-unsigned char send_byte(unsigned char data){
+unsigned char send_byte(unsigned char byte, int bitRate){
+	// Set status bit to Transmit (not Recieve)
+	start_Transmit();
+
 	SETSTATUS(BUSY);
 
-	helper.buffer = data; // Buffer data to handle in interrupt
+	helper.load = CALC_TIMER0_LOAD(bitRate); // Loading value for TIMER0 to time bit length
+	helper.buffer = byte; // Buffer data to handle in interrupt
 	helper.bit_cnt = 10; // Send 1 start bit, 8 data bit, 1 stop bit
-	helper.reload = LOAD_TIMER0_10400BAUD; // Loading value for TIMER0 to time bit length
 	
-	EIMSK = 0;  // disable INT0   
-	TIFR0 = (1<<TOIE0);  // clear timer0 ovrf interrupt flag         
-  	TIMSK0 = (1<<TOIE0);  // enable timer0 ovrf interrupt 
-	
-	timer0_set(helper.reload);
+	EIMSK = 0;  // disable INT0   	
+	timer0_set(helper.load);
 
   	set_K_low(); // Start bit
+
+	while (CHECKSTATUS(BUSY));
+	return helper.error;
 }
 
+/*********************************************************************
+** Receive byte
+** TIMER0 is used to time bit lengths
+** TIMER1 checks for timeouts
+**
+** First bit is send in this method
+** Further bits are send in TIMER0 Interrupt
+*********************************************************************/
+unsigned char receive_byte(int bitRate) {
+	start_Receive();
+	helper.bitRate = bitRate;
+	helper.load = CALC_TIMER0_LOAD(bitRate); // Loading value for TIMER0 to time bit length
 
+	// Maximum Waiting time is P2_MAX - Start TIMER1
+	timer1_set(TIME_P2max);
+	unsigned char *msg_pointer;	// Used for parsing the received data
+	
+	while (CHECKSTATUS(BUSY)); // Wait for received byte
+	incoming_byte = helper.byte_buffer;
+
+	return helper.error;
+}
 
 /*********************************************************************
 ** Wait given time
@@ -155,7 +150,7 @@ void wait(unsigned int TMP_TIME){
 ISR(TIMER0_OVF_vect){ 
 	// Reset Timer to its loading value
 	
-	TCNT0 = helper.reload;
+	TCNT0 = helper.load;
 
 	// Reduce bit counter
 	--helper.bit_cnt;
@@ -181,12 +176,68 @@ ISR(TIMER0_OVF_vect){
 		// Disable Timer0 interrupts and enable external interrupts
 		// Set free BUS communication
 		if(helper.bit_cnt<=0){
-			TIMSK0 = 0;  // disable timer0 interrupts 
+			 
 			timer0_stop();
-			EIFR = (1<<INTF0);  // clear INT0 flag   
-          	EIMSK = (1<<INT0);  // enable INT0    
-          	CLEARSTATUS(BUSY);
+			enable_INT0();
+          	
+			CLEARSTATUS(BUSY);
 		}
 	}
 	
+	if (!CHECKSTATUS(SENDING)) {
+		timer0_set(helper.load);
+
+		if (helper.bit_cnt >= 10 && is_K_high()){
+			// Start bit wrong: Cancel receiving and set error
+			CLEARSTATUS(BUSY);
+
+			timer0_stop();
+
+			helper.error = CODE_BUS_ERROR;
+		}
+		else if (helper.bit_cnt < 10 && helper.bit_cnt >= 2) {
+			// Shift to receive next bit
+			helper.byte_buffer >>= 1;
+			// Read each bit
+			if (is_K_high()) {
+				helper.byte_buffer |= 0x80;
+			}
+		}
+		else if (helper.bit_cnt == 1) {
+			CLEARSTATUS(BUSY);
+			timer0_stop();
+			if (!is_K_high()) {
+				// Stop bit wrong: Set error
+				helper.error = CODE_BUS_ERROR;
+			}
+			enable_INT0();
+		}
+	}
+	
+}
+
+
+ISR(TIMER1_OVF_vect) {
+	if (!CHECKSTATUS(SENDING)) {
+		// If message was about to be received -> time is up
+		timer1_stop();
+		helper.error = CODE_NO_DATA;
+		CLEARSTATUS(BUSY);
+	}
+}
+
+
+ISR(INT0_vect) {
+	timer1_stop();
+
+	// Receiving Byte...
+	SETSTATUS(BUSY);
+	timer0_set(CALC_TIMER0_LOAD(helper.bitRate*2)); // Set timer to half a bit time
+
+	// Reset incoming struct
+	helper.bit_cnt = 11; // One more to compensate for double reading of start bit
+	helper.byte_buffer = 0x00;
+
+	// Disable INT0 interrupt
+	disable_INT0();
 }
