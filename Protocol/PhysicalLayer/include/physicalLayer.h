@@ -128,7 +128,7 @@
 *********************************************************************/
 
 void wake_up();
-void obd_hardware_init();
+void init_physicalLayer();
 unsigned char send_byte(unsigned char byte, int bitRate);
 unsigned char receive_byte(int bitRate);
 
@@ -226,8 +226,7 @@ static inline void disable_INT0(void) {
 
 unsigned char incoming_byte;
 
-//#define CHECKSTATUS(status_bit) (helper.status & status_bit)
-#define CHECKSTATUS(status_bit) (helper.status & (1<<(status_bit)))
+#define CHECKSTATUS(status_bit) (helper.status & (1<<status_bit))
 #define SETSTATUS(status_bit) (helper.status |= (1<<status_bit))
 #define CLEARSTATUS(status_bit) (helper.status &= ~(1<<status_bit))
 

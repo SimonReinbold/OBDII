@@ -10,9 +10,10 @@
 
 #include <avr/interrupt.h>
 #include <stdint.h>
+#include <util/delay.h>
 
+#include "../../error_defs.h"
 #include "../include/physicalLayer.h"
-#include "../../../Application/include/error_defs.h"
 
 void start_Transmit();
 void start_Receive();
@@ -50,6 +51,7 @@ void wake_up() {
 
 void start_Transmit() {
 	SETSTATUS(SENDING);
+	disable_INT0();
 
 	helper.error = CODE_OK;
 }
@@ -65,7 +67,7 @@ void start_Receive() {
 ** Initialise Hardware
 **	Set Outputs and Inputs
 *********************************************************************/
-void obd_hardware_init(){
+void init_physicalLayer(){
 	K_Line_REG |= (1<<K_Line_OUT);
 	// High on idle
 	set_K_high();
@@ -102,6 +104,7 @@ unsigned char send_byte(unsigned char byte, int bitRate){
   	set_K_low(); // Start bit
 
 	while (CHECKSTATUS(BUSY));
+
 	return helper.error;
 }
 
@@ -123,6 +126,7 @@ unsigned char receive_byte(int bitRate) {
 	unsigned char *msg_pointer;	// Used for parsing the received data
 	
 	while (CHECKSTATUS(BUSY)); // Wait for received byte
+	
 	incoming_byte = helper.byte_buffer;
 
 	return helper.error;
@@ -149,13 +153,13 @@ void wait(unsigned int TMP_TIME){
 
 ISR(TIMER0_OVF_vect){ 
 	// Reset Timer to its loading value
-	
 	TCNT0 = helper.load;
 
 	// Reduce bit counter
 	--helper.bit_cnt;
 
 	if(CHECKSTATUS(SENDING)){
+		
 		// Send next bit
 		if(helper.bit_cnt>0 && helper.bit_cnt<=9){
 			if( helper.buffer&0x01 ) // check LSB status   
@@ -179,7 +183,7 @@ ISR(TIMER0_OVF_vect){
 			 
 			timer0_stop();
 			enable_INT0();
-          	
+
 			CLEARSTATUS(BUSY);
 		}
 	}
@@ -219,6 +223,7 @@ ISR(TIMER0_OVF_vect){
 
 ISR(TIMER1_OVF_vect) {
 	if (!CHECKSTATUS(SENDING)) {
+		
 		// If message was about to be received -> time is up
 		timer1_stop();
 		helper.error = CODE_NO_DATA;

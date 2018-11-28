@@ -1,86 +1,22 @@
 //#include "Protocol/DataLayer/include/dataLaver.h"
 #include <avr/io.h>
 #include <stdlib.h>
-#include <avr/delay.h>
+#include <util/delay.h>
 
-#include "../../Protocol/DataLayer/include/dataLaver.h"
+#include "../../Protocol/ApplicationLayer/include/applicationLayer.h"
 #include "../../LCD/lcd-routines.h"
-#include "../include/error_defs.h"
-
-unsigned char error;
 
 void boot();
 void show_version();
 
 int main() {
 	boot();
-	init_dataLayer();
 	
 	DDRC |= _BV(DDC5);
-	/* set pin 5 high to turn led on */	
 	
-	lcd_setcursor(0, 1);
-	error = start_communication_fastInit(); 
-	switch (error)
-	{
-		case CODE_OK:
-			lcd_string("OK");
-			break;
-		case CODE_DATA_ERROR:
-			lcd_string("DATA ERROR");
-			break;
-		case CODE_ERROR:
-			lcd_string("ERROR");
-			break;
-		case CODE_BUS_ERROR:
-			lcd_string("BUS ERROR");
-			break;
-		case CODE_NO_DATA:
-			lcd_string("NO DATA");
-			break;
-		case CODE_CHECKSUM_ERROR:
-			lcd_string("CHECKSUM ERROR");
-			break;
-		case CODE_NEGATIVE_RESPONSE:
-			lcd_string("START COM FAILED");
-			break;
-		default:
-			display(&error, 1, 1);
-			break;
-	}
-	
-	lcd_setcursor(0, 2);
-	error = stop_communication();
-	switch (error)
-	{
-	case CODE_OK:
-		lcd_string("OK");
-		break;
-	case CODE_DATA_ERROR:
-		lcd_string("DATA ERROR");
-		break;
-	case CODE_ERROR:
-		lcd_string("ERROR");
-		break;
-	case CODE_BUS_ERROR:
-		lcd_string("BUS ERROR");
-		break;
-	case CODE_NO_DATA:
-		lcd_string("NO DATA");
-		break;
-	case CODE_CHECKSUM_ERROR:
-		lcd_string("CHECKSUM ERROR");
-		break;
-	case CODE_NEGATIVE_RESPONSE:
-		lcd_string("START COM FAILED");
-		break;
-	default:
-		display(&error, 1, 2);
-		break;
-	}
-	
+	init_obdii();
+		
 	PORTC |= _BV(PORTC5);
-	/* set pin 5 low to turn led off */
 	//PORTC &= ~_BV(PORTC5);
 }
 
