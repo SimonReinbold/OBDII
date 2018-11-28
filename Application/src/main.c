@@ -2,12 +2,16 @@
 #include <avr/io.h>
 #include <stdlib.h>
 #include <util/delay.h>
+#include <string.h>
 
 #include "../../Protocol/ApplicationLayer/include/applicationLayer.h"
 #include "../../LCD/lcd-routines.h"
 
 void boot();
 void show_version();
+
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
 
 int main() {
 	boot();
@@ -30,29 +34,12 @@ void show_version() {
 	lcd_string("OBD2 Diagnose");
 
 	lcd_setcursor(0, 2);
-	lcd_string("Simon Reinbold");
+	char version[6];
+	strcpy(version, STR(GIT_VERSION));
+	for (int i = 0; i < 6; i++) {
+		lcd_data(version[i]);
+	}
 
-	_delay_ms(3000);
-	lcd_clear();
-
-	lcd_setcursor(0, 1);
-	lcd_string("Version");
-	
-	unsigned char major;
-	unsigned char minor;
-	unsigned char patch;
-
-	itoa(MAJOR, &major, 10);
-	itoa(MINOR, &minor, 10);
-	itoa(PATCH, &patch, 10);
-
-	lcd_setcursor(0, 2);
-	lcd_data(major);
-	lcd_data('.');
-	lcd_data(minor);
-	lcd_data('.');
-	lcd_data(patch);
-
-	_delay_ms(3000);
+	_delay_ms(4000);
 	lcd_clear();
 }
