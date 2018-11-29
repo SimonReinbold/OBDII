@@ -102,7 +102,7 @@ unsigned char send_byte(unsigned char byte, int bitRate){
 	timer0_set(helper.load);
 
   	set_K_low(); // Start bit
-
+	
 	while (CHECKSTATUS(BUSY));
 
 	return helper.error;
@@ -161,7 +161,7 @@ ISR(TIMER0_OVF_vect){
 	if(CHECKSTATUS(SENDING)){
 		
 		// Send next bit
-		if(helper.bit_cnt>0 && helper.bit_cnt<=9){
+		if(helper.bit_cnt>1 && helper.bit_cnt<=9){
 			if( helper.buffer&0x01 ) // check LSB status   
 			{   
 				set_K_high();  // send 1 bit   
@@ -179,11 +179,11 @@ ISR(TIMER0_OVF_vect){
 		// After stop bit is send:
 		// Disable Timer0 interrupts and enable external interrupts
 		// Set free BUS communication
-		if(helper.bit_cnt<=0){
+		if(helper.bit_cnt<=1){
 			 
 			timer0_stop();
 			enable_INT0();
-
+			
 			CLEARSTATUS(BUSY);
 		}
 	}

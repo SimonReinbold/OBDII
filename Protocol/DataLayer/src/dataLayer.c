@@ -57,14 +57,14 @@ unsigned char stop_communication() {
 	data[2] = 0xF1;
 	data[3] = 0x82;
 
-	error = send_msg(data, 4, 10400);
+	error = send_msg(data, 4, FAST_INIT_BITRATE);
 	
 	if (error != CODE_OK) {
 		return error;
 	}
 
 	// Receive Section
-	error = receive_msg(10400);
+	error = receive_msg(FAST_INIT_BITRATE);
 	
 	// Check for positive response
 	if (error == CODE_OK && incoming.service_id != 0x7F) {
@@ -91,13 +91,13 @@ unsigned char obd_fast_init() {
 	data[2] = 0xF1;
 	data[3] = 0x81;
 
-	error = send_msg(data, 4, 10400);
+	error = send_msg(data, 4, FAST_INIT_BITRATE);
 	if (error != CODE_OK) {
 		return error;
 	}
 	
 	// Receive Section
-	error = receive_msg(10400);
+	error = receive_msg(FAST_INIT_BITRATE);
 	if (error != CODE_OK) {
 		return error;
 	}
@@ -202,6 +202,7 @@ unsigned char send_msg(unsigned char *data, unsigned char n_bytes, int bitRate) 
 
 	// Calculate checksum while sending byte by byte
 	unsigned char checksum;
+	checksum = 0;
 	for (unsigned int i = 0; i < n_bytes; i++) {
 		checksum += *data;
 		
@@ -211,7 +212,7 @@ unsigned char send_msg(unsigned char *data, unsigned char n_bytes, int bitRate) 
 			return error;
 		}
 	}
-
+	checksum %= 256;
 	// Send last byte - checksum
 	error = send_byte(checksum, bitRate);
 

@@ -32,6 +32,8 @@
 #define PRESCALER_256  4 	
 #define PRESCALER_1024 5 
 
+#define FAST_INIT_BITRATE 10400
+
 /*********************************************************************
 ** TIMER0 is used for timing bit transmission - time for holding a bit
 **	Baudrate up to 10400 baud/s -> 10400 bit/s -> 1 bit = 96us
@@ -49,14 +51,14 @@
 										// TIMER1 limit = 4us*65536 = 262.144ms
 
 /*********************************************************************
-** Transform time values to its TIMER1 tick value
+** Transform time values to its TIMER tick value
 ** For use either load the timer with: max-X
 ** or run the timer from 0 and compare its value to the calculated number X
 **
 ** In claculation 1 the value 64 stands for the Prescaler of TIMER1
-**	hence TIMER1 has to be used for timer measuring
+** TIMER1 is used for timer measuring
 **
-** In calculation 2 the TIMER0 load value for 10400 baud/s transmission is calculated
+** In calculation 2 the TIMER0 load value for bitRate transmission is calculated
 **	there the value 8 stands for the TIMER0 Prescaler
 *********************************************************************/
 
