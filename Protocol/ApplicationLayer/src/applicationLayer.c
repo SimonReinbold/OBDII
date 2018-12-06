@@ -9,9 +9,11 @@ void decodeError(unsigned char error);
 
 unsigned char error;
 
-void init_obdii(){
+void init_obd() {
 	init_dataLayer();
+}
 
+void init_diagnose(){
 	lcd_clear();
 	lcd_setcursor(0, 1);
 	lcd_string("START COM");
@@ -54,7 +56,7 @@ void decodeError(unsigned char error) {
 		lcd_string("START COM FAILED");
 		break;
 	default:
-		display(&error, 1, 2);
+		lcd_display(&error, 1, 2);
 		break;
 	}
 }

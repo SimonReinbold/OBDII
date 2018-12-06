@@ -17,8 +17,9 @@
 
 void start_Transmit();
 void start_Receive();
+void init_timer0();
+void init_timer1();
 
-void wait(unsigned int TMP_TIME);
 
 volatile struct {
 	unsigned char buffer;
@@ -33,7 +34,7 @@ volatile struct {
 
 void wake_up() {
 	// Wait min Idle Time
-	wait(TIME_TidleFirst);
+	wait_idle(TIME_TidleFirst);
 
 	// Wake up pattern
 	set_K_low();
@@ -61,6 +62,8 @@ void start_Receive() {
 	SETSTATUS(BUSY);
 
 	helper.error = CODE_OK;
+
+	enable_INT0();
 }
 
 /*********************************************************************
@@ -79,8 +82,37 @@ void init_physicalLayer(){
 	set_L_high();
 
 	sei();
+
+	init_timer0();
+	init_timer1();
+
+	DDRD &= ~(1 << DDD2);
+	PORTD |= (1 << PD2); // Activate pull up
+	EICRA = (1 << ISC01);	//Set INT0 to occur on falling edge
+	disable_INT0();
 }
 
+void init_timer0() {
+	TCCR0A = 0x00;
+	// Prescaler will start and change TCCR0B
+	TCCR0B = 0x00;
+
+	// Disable Interrupts
+	TIMSK0 = 0x00;
+}
+
+void init_timer1() {
+
+	TCCR1A = 0x00;
+
+	// Prescaler will start and change TCCR1B
+	TCCR1B = 0x00;
+
+	TCCR1C = 0x00;
+
+	// Disablke Interrupts
+	TIMSK1 = 0x00;
+}
 /*********************************************************************
 ** Send byte
 ** TIMER0 is used to time bit lengths
@@ -88,7 +120,7 @@ void init_physicalLayer(){
 ** First bit is send in this method
 ** Further bits are send in TIMER0 Interrupt
 *********************************************************************/
-unsigned char send_byte(unsigned char byte, int bitRate){
+unsigned char send_byte(unsigned char byte, int bitRate){	
 	// Set status bit to Transmit (not Recieve)
 	start_Transmit();
 
@@ -117,14 +149,12 @@ unsigned char send_byte(unsigned char byte, int bitRate){
 ** Further bits are send in TIMER0 Interrupt
 *********************************************************************/
 unsigned char receive_byte(int bitRate) {
-	start_Receive();
 	helper.bitRate = bitRate;
 	helper.load = CALC_TIMER0_LOAD(bitRate); // Loading value for TIMER0 to time bit length
-
+	
+	start_Receive();
 	// Maximum Waiting time is P2_MAX - Start TIMER1
 	timer1_set(TIME_P2max);
-	unsigned char *msg_pointer;	// Used for parsing the received data
-	
 	while (CHECKSTATUS(BUSY)); // Wait for received byte
 	
 	incoming_byte = helper.byte_buffer;
@@ -136,13 +166,22 @@ unsigned char receive_byte(int bitRate) {
 ** Wait given time
 ** If Bus not idle the whole time, restart waiting
 *********************************************************************/
-void wait(unsigned int TMP_TIME){
+void wait_idle(unsigned int TMP_TIME){
 	timer1_start();
 	while(timer1_get()<TMP_TIME){
 		if(!(is_K_high())){
 			timer1_set(0);
 		}
 	}
+	timer1_stop();
+}
+
+/*********************************************************************
+** Wait given time
+*********************************************************************/
+void wait(unsigned int TMP_TIME) {
+	timer1_start();
+	while (timer1_get() < TMP_TIME);
 	timer1_stop();
 }
 
@@ -177,26 +216,24 @@ ISR(TIMER0_OVF_vect){
 			set_K_high();
 		}
 		// After stop bit is send:
-		// Disable Timer0 interrupts and enable external interrupts
+		// Disable Timer0 interrupts
 		// Set free BUS communication
-		if(helper.bit_cnt<=1){
+		if(helper.bit_cnt<1){
 			 
 			timer0_stop();
-			enable_INT0();
 			
 			CLEARSTATUS(BUSY);
 		}
 	}
 	
 	if (!CHECKSTATUS(SENDING)) {
-		timer0_set(helper.load);
-
+		
 		if (helper.bit_cnt >= 10 && is_K_high()){
 			// Start bit wrong: Cancel receiving and set error
 			CLEARSTATUS(BUSY);
-
+			
 			timer0_stop();
-
+			
 			helper.error = CODE_BUS_ERROR;
 		}
 		else if (helper.bit_cnt < 10 && helper.bit_cnt >= 2) {
@@ -214,16 +251,13 @@ ISR(TIMER0_OVF_vect){
 				// Stop bit wrong: Set error
 				helper.error = CODE_BUS_ERROR;
 			}
-			enable_INT0();
 		}
 	}
-	
 }
 
 
 ISR(TIMER1_OVF_vect) {
 	if (!CHECKSTATUS(SENDING)) {
-		
 		// If message was about to be received -> time is up
 		timer1_stop();
 		helper.error = CODE_NO_DATA;
@@ -235,10 +269,7 @@ ISR(TIMER1_OVF_vect) {
 ISR(INT0_vect) {
 	timer1_stop();
 
-	// Receiving Byte...
-	SETSTATUS(BUSY);
-	timer0_set(CALC_TIMER0_LOAD(helper.bitRate*2)); // Set timer to half a bit time
-
+	timer0_set(CALC_TIMER0_LOAD(FAST_INIT_BITRATE * 2)); // Set timer to half a bit time
 	// Reset incoming struct
 	helper.bit_cnt = 11; // One more to compensate for double reading of start bit
 	helper.byte_buffer = 0x00;

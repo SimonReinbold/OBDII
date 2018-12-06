@@ -1,4 +1,5 @@
-GIT_VERSION := $(shell git describe --abbrev=0 --always --tags)
+GIT_VERSION := $(shell git describe --always --tags)
+SHOW_CHARS = 17
 
 TARGET  = obdii
 SOURCES = main.c applicationLayer.c dataLayer.c physicalLayer.c lcd-routines.c 
@@ -10,7 +11,7 @@ BAUD = 115200
 F_CPU=16000000UL
 CC = avr-gcc
 
-CFLAGS = -c -std=c99 -MD -DF_CPU=$(F_CPU) -DGIT_VERSION=$(GIT_VERSION)
+CFLAGS = -c -std=c99 -MD -DF_CPU=$(F_CPU) -DGIT_VERSION=$(GIT_VERSION) -DVERS_CHARS=$(SHOW_CHARS)
 
 VPATH = Protocol/ApplicationLayer/src;Protocol/DataLayer/src;Protocol/PhysicalLayer/src;Application/src/;LCD/
 BPATH = build

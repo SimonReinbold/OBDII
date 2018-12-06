@@ -6,6 +6,13 @@
 
 unsigned char error;
 
+unsigned char obd_fast_init();
+
+unsigned char receive_msg(int bitRate);
+unsigned char send_msg(unsigned char *data, unsigned char n_bytes, int bitRate);
+char parse_format_byte(unsigned char format_byte);
+void clear_msg(void);
+
 struct {
 	unsigned char format_byte;
 	unsigned char target;
@@ -15,12 +22,6 @@ struct {
 	unsigned char data[255];
 	unsigned char checksum;
 }incoming;
-
-unsigned char obd_fast_init();
-unsigned char receive_msg(int bitRate);
-unsigned char send_msg(unsigned char *data, unsigned char n_bytes, int bitRate);
-unsigned char receive_msg(int bitRate);
-char parse_format_byte(unsigned char format_byte);
 
 /*********************************************************************
 ** Init Layers
@@ -103,11 +104,25 @@ unsigned char obd_fast_init() {
 	}
 }
 
+void clear_msg(void) {
+	incoming.format_byte = 0;
+	incoming.target = 0;
+	incoming.source = 0;
+	incoming.service_id = 0;
+	for (int i = 0; i < 33; i++) {
+		incoming.data[i] = 0;
+	}
+	incoming.checksum = 0;
+}
+
 /*********************************************************************
 ** Receive message
 *********************************************************************/
 unsigned char receive_msg(int bitRate) {
 	unsigned char checksum = 0;
+	unsigned char length;
+
+	clear_msg();
 
 	// Get Format byte
 	error = receive_byte(bitRate);
@@ -132,36 +147,43 @@ unsigned char receive_msg(int bitRate) {
 		}
 
 		buffer[i] = incoming_byte;
-		checksum += buffer[i];
 	}
 
 	switch (case_idx)
 	{
 	case 1:
 		incoming.service_id = buffer[0];
-		incoming.length = incoming.format_byte & 0x3F;
+		length = incoming.format_byte & 0x3F;
 		break;
 	case 2:
 		incoming.length = buffer[0];
+		length = incoming.length;
 		incoming.service_id = buffer[1];
 		break;
 	case 3:
 		incoming.target = buffer[0];
 		incoming.source = buffer[1];
 		incoming.service_id = buffer[2];
-		incoming.length = incoming.format_byte & 0x3F;
+		length = incoming.format_byte & 0x3F;
 		break;
 	case 4:
 		incoming.target = buffer[0];
 		incoming.source = buffer[1];
 		incoming.length = buffer[2];
+		length = incoming.length;
 		incoming.service_id = buffer[3];
 		break;
 	}
 
+	checksum += incoming.target;
+	checksum += incoming.source;
+	checksum += incoming.length;
+	checksum += incoming.service_id;
+
 	// Fill residual bytes into data array
 	int data_idx;
-	for (data_idx = 0; data_idx < incoming.length - 1; data_idx++) {
+	for (data_idx = 0; data_idx < length - 1; data_idx++) {
+		
 		// Get leftover buffer and fill data array
 		if (data_idx < 4 - case_idx) {
 			incoming.data[data_idx] = buffer[case_idx + data_idx];
@@ -175,18 +197,24 @@ unsigned char receive_msg(int bitRate) {
 			}
 
 			incoming.data[data_idx] = incoming_byte;
-			checksum += incoming.data[data_idx];
 		}
+		checksum += incoming.data[data_idx];
 	}
 
-	// Receive checksum byte
-	error = receive_byte(bitRate);
-	if (error != CODE_OK) {
-		return error;
+	if (case_idx == 3) {
+		incoming.checksum = buffer[3];
 	}
-
-	incoming.checksum = incoming_byte;
+	else {
+		// Receive checksum byte
+		error = receive_byte(bitRate);
+		if (error != CODE_OK) {
+			return error;
+		}
+		incoming.checksum = incoming_byte;
+	}
+	
 	checksum %= 256;
+	
 	if (incoming.checksum != checksum) {
 		error = CODE_CHECKSUM_ERROR;
 	}
