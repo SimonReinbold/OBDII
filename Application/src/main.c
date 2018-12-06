@@ -7,11 +7,14 @@
 #include "../../Protocol/ApplicationLayer/include/applicationLayer.h"
 #include "../../LCD/lcd-routines.h"
 
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
+
 void boot();
 void show_version();
 
-#define XSTR(x) #x
-#define STR(x) XSTR(x)
+const char version[] = STR(GIT_VERSION);
+
 
 int main() {
 	boot();
@@ -34,8 +37,6 @@ void show_version() {
 	lcd_string("OBD2 Diagnose");
 
 	lcd_setcursor(0, 2);
-	char version[VERS_CHARS];
-	strcpy(version, STR(GIT_VERSION));
 	for (int i = 0; i < VERS_CHARS; i++) {
 		lcd_data(version[i]);
 	}
