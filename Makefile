@@ -1,5 +1,5 @@
 GIT_VERSION := $(shell git describe --always --tags)
-SHOW_CHARS = 17
+SHOW_CHARS = 8
 
 TARGET  = obdii
 SOURCES = main.c applicationLayer.c dataLayer.c physicalLayer.c lcd-routines.c 
