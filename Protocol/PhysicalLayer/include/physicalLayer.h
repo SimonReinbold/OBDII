@@ -32,6 +32,8 @@
 #define PRESCALER_256  4 	
 #define PRESCALER_1024 5 
 
+#define FAST_INIT_BITRATE 10400
+
 /*********************************************************************
 ** TIMER0 is used for timing bit transmission - time for holding a bit
 **	Baudrate up to 10400 baud/s -> 10400 bit/s -> 1 bit = 96us
@@ -45,22 +47,22 @@
 #define TIMER0_Prescaler PRESCALER_8	// leads to 0.5us resolution @ 16MHz clock
 										// TIMER0 limit = 0.5us*256 = 128us
 
-#define TIMER1_Prescaler PRESCALER_64	// leads to 4us resolution @ 16MHz clock
-										// TIMER1 limit = 4us*65536 = 262.144ms
+#define TIMER1_Prescaler PRESCALER_256	// leads to 16us resolution @ 16MHz clock
+										// TIMER1 limit = 16us*65536 ~ 1s
 
 /*********************************************************************
-** Transform time values to its TIMER1 tick value
+** Transform time values to its TIMER tick value
 ** For use either load the timer with: max-X
 ** or run the timer from 0 and compare its value to the calculated number X
 **
-** In claculation 1 the value 64 stands for the Prescaler of TIMER1
-**	hence TIMER1 has to be used for timer measuring
+** In claculation 1 the value 256 stands for the Prescaler of TIMER1
+** TIMER1 is used for timer measuring
 **
-** In calculation 2 the TIMER0 load value for 10400 baud/s transmission is calculated
+** In calculation 2 the TIMER0 load value for bitRate transmission is calculated
 **	there the value 8 stands for the TIMER0 Prescaler
 *********************************************************************/
 
-#define ms2cnt(ms) (uint16_t)((uint32_t)ms/1000*((uint32_t)F_CPU/64))
+#define ms2cnt(ms) (uint16_t)(((double)ms/1000)*((uint32_t)F_CPU/256))
 
 #define CALC_TIMER0_LOAD(bitRate) (uint8_t)(256-((uint32_t)F_CPU/((uint32_t)(bitRate)*(uint32_t)8)))
 
@@ -95,7 +97,7 @@
 
 // Time from end of the address byte to start of synchronisation pattern
 #define TIME_W1min ms2cnt(60)
-#define TIME_W1max ms2cnt(300)	// WARNING: NOT COUNTABLE WITH TIMER1 -> no use of this value
+#define TIME_W1max ms2cnt(300)	
 
 // Time from end of the synchronisation pattern to the start of key byte 1
 #define TIME_W2min ms2cnt(5)
@@ -111,7 +113,7 @@
 #define TIME_W4max ms2cnt(50)	
 
 // Time before the tester starts to transmit the address byte
-#define TIME_W5max ms2cnt(300)	// WARNING: NOT COUNTABLE WITH TIMER1 -> no use of this value
+#define TIME_W5max ms2cnt(300)	
 
 /**** Fast Init ****/
 
@@ -119,9 +121,9 @@
 #define TIME_TiniL ms2cnt(25)				// Time for Wakeup Pattern Low
 #define TIME_TiniH ms2cnt(25)				// Time for Wakeup Pattern High
 
-#define TIME_TidleFirst ms2cnt(TIME_W5max)	// Idel time after power on
-#define TIME_TidleStop ms2cnt(TIME_P3min)	// Idel time after completion of StopCommunication service
-#define TIME_TidleStop2 ms2cnt(TIME_P3max)			// Idel time after stopping communication by time-out P3max
+#define TIME_TidleFirst TIME_W5max			// Idel time after power on
+#define TIME_TidleStop	TIME_P3min			// Idel time after completion of StopCommunication service
+#define TIME_TidleStop2 TIME_P3max			// Idel time after stopping communication by time-out P3max
 
 /*********************************************************************
 ** Functions
@@ -131,6 +133,8 @@ void wake_up();
 void init_physicalLayer();
 unsigned char send_byte(unsigned char byte, int bitRate);
 unsigned char receive_byte(int bitRate);
+void wait_idle(unsigned int TMP_TIME);
+void wait(unsigned int TMP_TIME);
 
 // General
 static inline void set_high(unsigned int TMP_PORT, unsigned int TMP_PIN){
@@ -144,10 +148,10 @@ static inline void set_low(unsigned int TMP_PORT, unsigned int TMP_PIN){
 // Timers 
 static inline void timer0_start() 
 { 
-	TIMSK0 = (1 << TOIE0);  // enable timer0 ovrf interrupt
 	TIFR0 = (1 << TOIE0);  // clear timer0 ovrf interrupt flag
+	TIMSK0 = (1 << TOIE0);  // enable timer0 ovrf interrupt
+	TCNT0 = 0;
     TCCR0B = TIMER0_Prescaler; 
-    TCNT0 = 0; 
 } 
  
 static inline void timer0_stop(void) 
@@ -158,8 +162,8 @@ static inline void timer0_stop(void)
  
 static inline void timer0_set(unsigned char val) 
 { 
-	TIMSK0 = (1 << TOIE0);  // enable timer0 ovrf interrupt
 	TIFR0 = (1 << TOIE0);  // clear timer0 ovrf interrupt flag
+	TIMSK0 = (1 << TOIE0);  // enable timer0 ovrf interrupt
 	TCNT0 = val;
 	TCCR0B = TIMER0_Prescaler;
 } 
@@ -168,10 +172,10 @@ static inline void timer0_set(unsigned char val)
 
 static inline void timer1_start() 
 { 
-	TIMSK1 = (1 << TOIE1);  // enable timer1 ovrf interrupt
 	TIFR1 = (1 << TOIE1);  // clear timer1 ovrf interrupt flag
+	TIMSK1 = (1 << TOIE1);  // enable timer1 ovrf interrupt
+	TCNT1 = 0;
     TCCR1B = TIMER1_Prescaler; 
-    TCNT1 = 0; 
 } 
  
 static inline void timer1_stop(void) 
@@ -182,8 +186,8 @@ static inline void timer1_stop(void)
  
 static inline void timer1_set(unsigned int val) 
 { 
-	TIMSK1 = (1 << TOIE1);  // enable timer1 ovrf interrupt
 	TIFR1 = (1 << TOIE1);  // clear timer1 ovrf interrupt flag
+	TIMSK1 = (1 << TOIE1);  // enable timer1 ovrf interrupt
 	TCNT1 = val;
 	TCCR1B = TIMER1_Prescaler;
 } 
