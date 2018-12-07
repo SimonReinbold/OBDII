@@ -108,6 +108,7 @@ void clear_msg(void) {
 	incoming.format_byte = 0;
 	incoming.target = 0;
 	incoming.source = 0;
+	incoming.length = 0;
 	incoming.service_id = 0;
 	for (int i = 0; i < 33; i++) {
 		incoming.data[i] = 0;
@@ -133,88 +134,90 @@ unsigned char receive_msg(int bitRate) {
 	incoming.format_byte = incoming_byte;
 	checksum += incoming.format_byte;
 
-	char case_idx;
-	case_idx = parse_format_byte(incoming.format_byte);
+	/* Get case idx
+	*
+	*	1: FMT SID DATA CS
+	*	2: FMT LEN SID DATA CS
+	*	3: FMT TGT SRC SID DATA CS
+	*	4: FMT TGT SRC LEN SID DATA CS
+	*
+	*/
+	char case_idx = parse_format_byte(incoming.format_byte);
 
-	unsigned char buffer[4];
+	/*
+	* Fill the message struct step by step
+	*/
 
-	// Get next four bytes
-	for (int i = 0; i < 4; i++) {
+	// Fill target and source
+	if (case_idx == 3 || case_idx == 4) {
 		error = receive_byte(bitRate);
 
 		if (error != CODE_OK) {
 			return error;
 		}
 
-		buffer[i] = incoming_byte;
-	}
+		incoming.target = incoming_byte;
+		checksum += incoming.target;
 
-	switch (case_idx)
-	{
-	case 1:
-		incoming.service_id = buffer[0];
-		length = incoming.format_byte & 0x3F;
-		break;
-	case 2:
-		incoming.length = buffer[0];
-		length = incoming.length;
-		incoming.service_id = buffer[1];
-		break;
-	case 3:
-		incoming.target = buffer[0];
-		incoming.source = buffer[1];
-		incoming.service_id = buffer[2];
-		length = incoming.format_byte & 0x3F;
-		break;
-	case 4:
-		incoming.target = buffer[0];
-		incoming.source = buffer[1];
-		incoming.length = buffer[2];
-		length = incoming.length;
-		incoming.service_id = buffer[3];
-		break;
-	}
+		error = receive_byte(bitRate);
 
-	checksum += incoming.target;
-	checksum += incoming.source;
-	checksum += incoming.length;
-	checksum += incoming.service_id;
-
-	// Fill residual bytes into data array
-	int data_idx;
-	for (data_idx = 0; data_idx < length - 1; data_idx++) {
-		
-		// Get leftover buffer and fill data array
-		if (data_idx < 4 - case_idx) {
-			incoming.data[data_idx] = buffer[case_idx + data_idx];
+		if (error != CODE_OK) {
+			return error;
 		}
-		// continue reading bytes
-		else {
-			error = receive_byte(bitRate);
 
-			if (error != CODE_OK) {
-				return error;
-			}
-
-			incoming.data[data_idx] = incoming_byte;
-		}
-		checksum += incoming.data[data_idx];
+		incoming.source = incoming_byte;
+		checksum += incoming.source;
 	}
 
-	if (case_idx == 3) {
-		incoming.checksum = buffer[3];
+	// Length byte included
+	if (case_idx == 2 || case_idx == 4) {
+		error = receive_byte(bitRate);
+
+		if (error != CODE_OK) {
+			return error;
+		}
+
+		incoming.length = incoming_byte;
+		checksum += incoming.length;
+		length = incoming.length;
 	}
 	else {
-		// Receive checksum byte
+		length = incoming.format_byte & 0x3F;
+	}
+
+	// SID and data left 
+	// defined by length variable filled with either the length byte or the length defined in FMT
+
+	for (int data_idx = 0; data_idx < length; data_idx++) {
 		error = receive_byte(bitRate);
+
 		if (error != CODE_OK) {
 			return error;
 		}
-		incoming.checksum = incoming_byte;
+
+		if (data_idx == 0) {
+			// SID
+			incoming.service_id = incoming_byte;
+			checksum += incoming.service_id;
+		}
+		else {
+			// Data bytes
+			incoming.data[data_idx - 1] = incoming_byte;
+			checksum += incoming.data[data_idx - 1];
+		}
+		
 	}
+
+	// Checksum
+	error = receive_byte(bitRate);
+
+	if (error != CODE_OK) {
+		return error;
+	}
+
+	incoming.checksum = incoming_byte;
 	
-	checksum %= 256;
-	
+	// Compare checksum value
 	if (incoming.checksum != checksum) {
 		error = CODE_CHECKSUM_ERROR;
 	}
