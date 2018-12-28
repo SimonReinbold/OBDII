@@ -71,11 +71,11 @@ void start_Receive() {
 **	Set Outputs and Inputs
 *********************************************************************/
 void init_physicalLayer(){
-	K_Line_REG |= (1<<K_Line_OUT);
+	K_Line_OUT_REG |= (1<<K_Line_OUT);
 	// High on idle
 	set_K_high();
 
-	K_Line_REG &= ~(1<<K_Line_IN);
+	K_Line_IN_REG &= ~(1<<K_Line_IN);
 
 	L_Line_REG |= (1<<L_Line_OUT);
 	// High on idle

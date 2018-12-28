@@ -12,7 +12,7 @@ void boot();
 
 int main() {
 	boot();
-
+	
 	unsigned char error;
 
 	while (1) {
@@ -31,6 +31,9 @@ int main() {
 			break;
 		case 3:
 			error = currentNode->execute();
+			lcd_clear();
+			lcd_append_decimal(error);
+			_delay_ms(1000);
 			if (error == CODE_OK) {
 				if (currentNode->submenu) {
 					menuLayerDown();

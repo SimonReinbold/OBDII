@@ -7,7 +7,6 @@
 
 void decodeError(unsigned char error);
 
-unsigned char error;
 
 void init_obd() {
 	init_dataLayer();
@@ -16,8 +15,7 @@ void init_obd() {
 }
 
 unsigned char init_diagnose(unsigned char* data, unsigned char nbytes){
-	error = start_communication_fastInit(data, nbytes);
-	return error;
+	return start_communication_fastInit(data, nbytes);
 }
 
 unsigned char parseRequest(unsigned char* request, unsigned char nbytes) {

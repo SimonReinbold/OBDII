@@ -34,9 +34,8 @@ unsigned char start_communication_fastInit(unsigned char* data, unsigned char nb
 
 	// Receive Section
 	error = receive_msg(FAST_INIT_BITRATE);
-	if (error != CODE_OK) {
-		return error;
-	}
+
+	return error;
 }
 
 /*********************************************************************

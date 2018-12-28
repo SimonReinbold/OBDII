@@ -23,6 +23,10 @@ void USART_Init()
 	UBRR0H = (unsigned char)(MYUBRR >>8);
 	UBRR0L = (unsigned char)MYUBRR;
 
+	// Enable internal Pull-ups
+	PORTD |= 1 << PD0;
+	PORTD |= 1 << PD1;
+
 
 	/* Set frame format: 8data, 2stop bit */
 	UCSR0C = (1<<USBS0)|(3<<UCSZ00);

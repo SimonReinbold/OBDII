@@ -32,12 +32,14 @@ void executeRequest() {
 
 	unsigned char error = decodeMessage();
 
+	// Set default error for reply
+	reply_data[0] = error;
+	reply_size = 1;
+	
 	if (error != CODE_OK) {
-		reply_data[0] = error;
-		reply_size = 1;
 		return;
 	}
-
+	
 	// Check for instruction
 	if (msg.type != REGULAR_INSTRUCTION) {
 		instruction();
@@ -67,24 +69,35 @@ unsigned char decodeMessage() {
 	if (msg.checksum != uart_buffer[msg.length + 2]) {
 		return CODE_CHECKSUM_ERROR;
 	}
+	
 	return CODE_OK;
 }
 
 void instruction() {
 	unsigned char error;
+	
 	switch (msg.type) {
 		case FAST_INIT_INSTRUCTION:
 			error = init_diagnose(msg.data, msg.length);
-			if (error = CODE_OK) {
+			if (error == CODE_OK) {
 				reply_data[0] = received_data[0];
 				reply_data[1] = received_data[1];
 				reply_size = 2;
+			}
+			else {
+				reply_data[0] = error;
+				reply_size = 1;
 			}
 	}
 }
 
 void regular() {
-	parseRequest(msg.data, msg.length);
+	unsigned char error = parseRequest(msg.data, msg.length);
+	if (error != CODE_OK) {
+		reply_data[0] = error;
+		reply_size = 1;
+		return;
+	}
 	for (unsigned char i = 0; i < *received_nbytes; i++) {
 		reply_data[i] = received_data[i];
 	}
@@ -124,6 +137,12 @@ unsigned char usart_receive_data(unsigned char* data_buffer) {
 	checksum += length;
 	data_buffer++;
 
+	char type;
+	type = USART_Receive();
+	*data_buffer = type;
+	checksum += type;
+	data_buffer++;
+
 	// Parse first byte for msg length
 	for (char i = 0; i < length; i++) {
 		*data_buffer = USART_Receive();
@@ -131,12 +150,8 @@ unsigned char usart_receive_data(unsigned char* data_buffer) {
 		data_buffer++;
 	}
 
-	// Receive checksum
-	unsigned char rec_checksum;
-	rec_checksum = USART_Receive();
-	if (checksum != rec_checksum) {
-		return CODE_CHECKSUM_ERROR;
-	}
+	// Checksum
+	*data_buffer = USART_Receive();
+	
 	return CODE_OK;
-
 }

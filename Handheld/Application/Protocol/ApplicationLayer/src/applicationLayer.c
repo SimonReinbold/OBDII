@@ -50,7 +50,13 @@ unsigned char obd_fast_init() {
 	data[3] = 0x81;
 
 	usart_send_instruction(data, 4, FAST_INIT_INSTRUCTION);
-	return usart_receive_data(data_buffer);
+	unsigned char error = usart_receive_data(data_buffer);
+
+	if (error != CODE_OK) {
+		return error;
+	}
+	
+	return data_buffer[2];
 	
 }
 

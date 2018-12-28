@@ -57,6 +57,11 @@ unsigned char usart_receive_data(unsigned char* data_buffer) {
 	checksum += length;
 	data_buffer++;
 
+	unsigned char type = USART_Receive();
+	*data_buffer = type;
+	checksum += type;
+	data_buffer++;
+
 	// Parse first byte for msg length
 	for (char i = 0; i < length; i++) {
 		*data_buffer = USART_Receive();
@@ -64,12 +69,8 @@ unsigned char usart_receive_data(unsigned char* data_buffer) {
 		data_buffer++;
 	}
 
-	// Receive checksum
-	unsigned char rec_checksum;
-	rec_checksum = USART_Receive();
-	if (checksum != rec_checksum) {
-		return CODE_CHECKSUM_ERROR;
-	}
-	return CODE_OK;
+	// Checksum
+	*data_buffer = USART_Receive();
 
+	return CODE_OK;
 }
