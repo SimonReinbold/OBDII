@@ -26,7 +26,5 @@ unsigned char init_diagnose(unsigned char* data, unsigned char nbytes){
 }
 
 unsigned char parseRequest(unsigned char* request, unsigned char nbytes) {
-	unsigned char error;
-	error = handleRequest(request, nbytes);
-	return error;
+	return handleRequest(request, nbytes);
 }

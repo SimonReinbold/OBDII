@@ -84,9 +84,10 @@ void clear_msg(void) {
 unsigned char receive_msg(int bitRate) {
 	unsigned char checksum = 0;
 	unsigned char length;
+	incoming.dataStreamLength = 0;
 
 	clear_msg();
-	unsigned char* dataStreamPtr = incoming.dataStream;
+	unsigned char* dataStreamPtr = &incoming.dataStream[0];
 
 	// Get Format byte
 	error = receive_byte(bitRate);
@@ -96,6 +97,7 @@ unsigned char receive_msg(int bitRate) {
 	}
 	incoming.format_byte = incoming_byte;
 	*dataStreamPtr++ = incoming_byte;
+	(incoming.dataStreamLength)++;
 	checksum += incoming.format_byte;
 
 	/* Get case idx
@@ -122,6 +124,7 @@ unsigned char receive_msg(int bitRate) {
 
 		incoming.target = incoming_byte;
 		*dataStreamPtr++ = incoming_byte;
+		(incoming.dataStreamLength)++;
 		checksum += incoming.target;
 
 		error = receive_byte(bitRate);
@@ -132,6 +135,7 @@ unsigned char receive_msg(int bitRate) {
 
 		incoming.source = incoming_byte;
 		*dataStreamPtr++ = incoming_byte;
+		(incoming.dataStreamLength)++;
 		checksum += incoming.source;
 	}
 
@@ -145,6 +149,7 @@ unsigned char receive_msg(int bitRate) {
 
 		incoming.length = incoming_byte;
 		*dataStreamPtr++ = incoming_byte;
+		(incoming.dataStreamLength)++;
 		checksum += incoming.length;
 		length = incoming.length;
 	}
@@ -166,12 +171,14 @@ unsigned char receive_msg(int bitRate) {
 			// SID
 			incoming.service_id = incoming_byte;
 			*dataStreamPtr++ = incoming_byte;
+			(incoming.dataStreamLength)++;
 			checksum += incoming.service_id;
 		}
 		else {
 			// Data bytes
 			incoming.data[data_idx - 1] = incoming_byte;
 			*dataStreamPtr++ = incoming_byte;
+			(incoming.dataStreamLength)++;
 			checksum += incoming.data[data_idx - 1];
 		}
 		
@@ -186,8 +193,7 @@ unsigned char receive_msg(int bitRate) {
 
 	incoming.checksum = incoming_byte;
 	*dataStreamPtr++ = incoming_byte;
-	
-	incoming.dataStreamLength = (dataStreamPtr - &(incoming.dataStream[0])) * sizeof(unsigned char);
+	(incoming.dataStreamLength)++;
 
 	// Compare checksum value
 	if (incoming.checksum != checksum) {

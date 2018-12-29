@@ -35,8 +35,8 @@ int main() {
 			error = currentNode->execute();
 			lcd_clear();
 			decodeError(error);
-			lcd_display(msg.data,msg.length,2);
-			_delay_ms(5000);
+			lcd_display(&msg.data[3],msg.length-4,2);
+			_delay_ms(1000);
 			if (error == CODE_OK) {
 				if (currentNode->submenu) {
 					menuLayerDown();

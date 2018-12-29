@@ -53,7 +53,8 @@ unsigned char usart_receive_data() {
 	clearMessage();
 	set_Receiver();
 
-	char checksum = 0;
+	unsigned char checksum = 0;
+
 	msg.length = USART_Receive();
 	checksum += msg.length;
 
@@ -70,7 +71,8 @@ unsigned char usart_receive_data() {
 	msg.checksum = USART_Receive();
 
 	if (msg.checksum != checksum) {
-		return CODE_CHECKSUM_ERROR_USART;
+		return checksum;
+		//return CODE_CHECKSUM_ERROR_USART;
 	}
 
 	return CODE_OK;

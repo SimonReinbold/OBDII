@@ -57,8 +57,8 @@ unsigned char obd_fast_init() {
 *********************************************************************/
 unsigned char requestPIDs() {
 	unsigned char data[4];
-	data[0] = 0xC2;
-	data[1] = 0x33;
+	data[0] = 0x82;
+	data[1] = 0x01;
 	data[2] = 0xF1;
 	data[3] = 0x01;
 	data[4] = 0x00;
@@ -84,7 +84,7 @@ unsigned char stop_communication() {
 	//** Start Communication Pattern:           0xC1         |  0x33  |  0xF1  |   0x82     |   TBD
 	unsigned char data[4];
 	data[0] = 0xC1;
-	data[1] = 0x33;
+	data[1] = 0x01;
 	data[2] = 0xF1;
 	data[3] = 0x82;
 
