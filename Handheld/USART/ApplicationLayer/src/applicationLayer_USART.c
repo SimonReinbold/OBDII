@@ -9,12 +9,10 @@
 #include <instructionSet.h>
 #include <string.h>
 
-#include "../../DataLayer/include/dataLayer.h"
-#include "../include/applicationLayer.h"
+#include "../../DataLayer/include/dataLayer_USART.h"
+#include "../include/applicationLayer_USART.h"
 
 unsigned char obd_fast_init();
-
-unsigned char data_buffer[255];
 
 void init_applicationLayer() {
 	init_dataLayer();
@@ -24,14 +22,7 @@ void init_applicationLayer() {
 ** Start Communication
 *********************************************************************/
 unsigned char start_communication_fastInit() {
-	unsigned char error = obd_fast_init();
-
-	// Check for positive response
-	if (error == CODE_OK && data_buffer[0] != CODE_OK) {
-		error = CODE_NEGATIVE_RESPONSE;
-	}
-
-	return error;
+	return obd_fast_init();
 }
 
 /*********************************************************************
@@ -50,14 +41,15 @@ unsigned char obd_fast_init() {
 	data[3] = 0x81;
 
 	usart_send_instruction(data, 4, FAST_INIT_INSTRUCTION);
-	unsigned char error = usart_receive_data(data_buffer);
+	unsigned char error = usart_receive_data();
 
+	// USART Checksum error
 	if (error != CODE_OK) {
 		return error;
 	}
 	
-	return data_buffer[2];
-	
+	// No USART error, return the error code in msg.type
+	return msg.type;
 }
 
 /*********************************************************************
@@ -72,14 +64,14 @@ unsigned char requestPIDs() {
 	data[4] = 0x00;
 
 	usart_send_command(data, 5);
-	unsigned char error = usart_receive_data(data_buffer);
+	unsigned char error = usart_receive_data();
 
-	// Check for positive response
-	if (error == CODE_OK && data_buffer[0] != CODE_OK) {
-		error = CODE_NEGATIVE_RESPONSE;
+	// USART Checksum error
+	if (error != CODE_OK) {
+		return error;
 	}
 
-	return error;
+	return msg.type;
 }
 
 /*********************************************************************
@@ -97,12 +89,12 @@ unsigned char stop_communication() {
 	data[3] = 0x82;
 
 	usart_send_command(data, 4);
-	unsigned char error = usart_receive_data(data_buffer);
+	unsigned char error = usart_receive_data();
 
-	// Check for positive response
-	if (error == CODE_OK && data_buffer[0] != CODE_OK) {
-		error = CODE_NEGATIVE_RESPONSE;
+	// USART Checksum error
+	if (error != CODE_OK) {
+		return error;
 	}
 
-	return error;
+	return msg.type;
 }

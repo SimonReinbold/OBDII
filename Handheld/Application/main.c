@@ -6,9 +6,11 @@
 #include "../LCD/lcd-routines.h"
 #include "Buttons/buttonHandler.h"
 #include "Menu/Menu.h"
-#include "Protocol/ApplicationLayer/include/applicationLayer.h"
+#include "../USART/ApplicationLayer/include/applicationLayer_USART.h"
+#include "../USART/DataLayer/include/dataLayer_USART.h"
 
 void boot();
+void decodeError(unsigned char error);
 
 int main() {
 	boot();
@@ -32,8 +34,9 @@ int main() {
 		case 3:
 			error = currentNode->execute();
 			lcd_clear();
-			lcd_append_decimal(error);
-			_delay_ms(1000);
+			decodeError(error);
+			lcd_display(msg.data,msg.length,2);
+			_delay_ms(5000);
 			if (error == CODE_OK) {
 				if (currentNode->submenu) {
 					menuLayerDown();
@@ -57,4 +60,41 @@ void boot() {
 	MCUSR &= ~(1 << WDRF);
 
 	showMenu();
+}
+
+void decodeError(unsigned char error) {
+	lcd_setcursor(0, 1);
+	switch (error)
+	{
+	case CODE_OK:
+		lcd_string("OK");
+		break;
+	case CODE_DATA_ERROR:
+		lcd_string("DATA ERROR");
+		break;
+	case CODE_ERROR:
+		lcd_string("ERROR");
+		break;
+	case CODE_BUS_ERROR_START:
+		lcd_string("BUS ERROR START");
+		break;
+	case CODE_BUS_ERROR_STOP:
+		lcd_string("BUS ERROR STOP");
+		break;
+	case CODE_NO_DATA:
+		lcd_string("NO DATA");
+		break;
+	case CODE_CHECKSUM_ERROR_KWP2000:
+		lcd_string("CHECKSUM ERROR KWP2000");
+		break;
+	case CODE_CHECKSUM_ERROR_USART:
+		lcd_string("CHECKSUM ERROR USART");
+		break;
+	case CODE_NEGATIVE_RESPONSE:
+		lcd_string("START COM FAILED");
+		break;
+	default:
+		lcd_display(&error, 1, 2);
+		break;
+	}
 }

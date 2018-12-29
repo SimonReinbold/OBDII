@@ -13,7 +13,7 @@
 
 #define K_Line_IN_REG DDRD
 #define K_Line_OUT_REG DDRC
-#define K_Line_PORT PORTD
+#define K_Line_PORT PORTC
 #define K_Line_PIN PIND
 #define K_Line_OUT PC5
 #define K_Line_IN PD2

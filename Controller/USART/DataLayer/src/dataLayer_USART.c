@@ -3,17 +3,21 @@
 #include <instructionSet.h>
 
 #include "../include/dataLayer_USART.h"
-#include "../../Protocol/ApplicationLayer/include/applicationLayer.h"
+#include "../../../KWP2000/ApplicationLayer/include/applicationLayer_KWP2000.h"
+#include "../../../KWP2000/DataLayer/include/dataLayer_KWP2000.h"
 
 void clearMessage();
 unsigned char decodeMessage();
 void instruction();
 void regular();
 void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char type);
-unsigned char usart_receive_data(unsigned char* data_buffer);
+void usart_receive_data(unsigned char* data_buffer);
 
 void init_dataLayer_USART() {
 	USART_Init_Receiver();
+	reply_data[0] = 0;
+	reply_size = 0;
+	reply_type = CODE_OK;
 }
 
 void clearMessage() {
@@ -30,13 +34,12 @@ void executeRequest() {
 	// Wait for instructions
 	usart_receive_data(uart_buffer);
 
-	unsigned char error = decodeMessage();
+	reply_type = decodeMessage();
 
 	// Set default error for reply
-	reply_data[0] = error;
-	reply_size = 1;
+	reply_size = 0;
 	
-	if (error != CODE_OK) {
+	if (reply_type != CODE_OK) {
 		return;
 	}
 	
@@ -50,9 +53,14 @@ void executeRequest() {
 }
 
 void reply() {
-	usart_send_data(reply_data, reply_size,REGULAR_INSTRUCTION);
+	usart_send_data(reply_data, reply_size, reply_type);
 }
 
+/* 
+* Decodes receved USART message and assigns correspondant msg struct values
+*
+* return: CODE_CHECKSUM_ERROR or CODE_OK
+*/
 unsigned char decodeMessage() {
 	clearMessage();
 
@@ -67,41 +75,44 @@ unsigned char decodeMessage() {
 	}
 
 	if (msg.checksum != uart_buffer[msg.length + 2]) {
-		return CODE_CHECKSUM_ERROR;
+		return CODE_CHECKSUM_ERROR_USART;
 	}
 	
 	return CODE_OK;
 }
 
-void instruction() {
-	unsigned char error;
-	
+/*
+* Executes the desired instruction including the corresponing special execution
+* Calls KWP2000 Application Layer functions
+*
+* If return == CODE_OK set reply to CODE_SUCCESS
+* Else set reply to CODE_FAILED
+*
+*/
+void instruction() {	
+	reply_size = 0; // Size is zero if request fails
 	switch (msg.type) {
 		case FAST_INIT_INSTRUCTION:
-			error = init_diagnose(msg.data, msg.length);
-			if (error == CODE_OK) {
-				reply_data[0] = received_data[0];
-				reply_data[1] = received_data[1];
-				reply_size = 2;
+			reply_type = init_diagnose(msg.data, msg.length);
+			//if (reply_type == CODE_OK) {
+			for (unsigned char i = 0; i < incoming.dataStreamLength; i++) {
+				reply_data[i] = incoming.dataStream[i];
 			}
-			else {
-				reply_data[0] = error;
-				reply_size = 1;
-			}
+			reply_size = incoming.dataStreamLength;
+			//}
 	}
 }
 
 void regular() {
-	unsigned char error = parseRequest(msg.data, msg.length);
-	if (error != CODE_OK) {
-		reply_data[0] = error;
-		reply_size = 1;
+	reply_type = parseRequest(msg.data, msg.length);
+	if (reply_type != CODE_OK) {
+		reply_size = 0; // Failed request, return and transmit error code
 		return;
 	}
-	for (unsigned char i = 0; i < *received_nbytes; i++) {
-		reply_data[i] = received_data[i];
+	for (unsigned char i = 0; i < incoming.dataStreamLength; i++) {
+		reply_data[i] = incoming.dataStream[i];
 	}
-	reply_size = *received_nbytes;
+	reply_size = incoming.dataStreamLength;
 }
 
 void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char type) {
@@ -127,7 +138,7 @@ void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char ty
 	USART_Transmit(checksum);
 }
 
-unsigned char usart_receive_data(unsigned char* data_buffer) {
+void usart_receive_data(unsigned char* data_buffer) {
 	set_Receiver();
 
 	char checksum = 0;
@@ -152,6 +163,4 @@ unsigned char usart_receive_data(unsigned char* data_buffer) {
 
 	// Checksum
 	*data_buffer = USART_Receive();
-	
-	return CODE_OK;
 }

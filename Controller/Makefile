@@ -6,7 +6,7 @@ GIT_VERSION := $(shell git describe --always --tags)
 SHOW_CHARS = 8
 
 TARGET  = obdii
-SOURCES = main.c dataLayer_USART.c applicationLayer.c dataLayer.c physicalLayer.c lcd-routines.c USART.c
+SOURCES = main.c dataLayer_USART.c applicationLayer_KWP2000.c dataLayer_KWP2000.c physicalLayer_KWP2000.c lcd-routines.c USART.c
 
 PROGRAMMER = arduino
 MCU = atmega328p

@@ -8,8 +8,8 @@
 #include <util/delay.h>
 #include <avr/io.h>
 
-#include "../include/dataLayer_USART.h"
-#include "../../Protocol/ApplicationLayer/include/applicationLayer.h"
+#include "../../USART/DataLayer/include/dataLayer_USART.h"
+#include "../../KWP2000/ApplicationLayer/include/applicationLayer_KWP2000.h"
 
 void boot();
 

@@ -13,7 +13,7 @@
 #include <util/delay.h>
 
 #include <error_defs.h>
-#include "../include/physicalLayer.h"
+#include "../include/physicalLayer_KWP2000.h"
 
 void start_Transmit();
 void start_Receive();

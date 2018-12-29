@@ -9,8 +9,10 @@
 #include <error_defs.h>
 #include <USART/include/USART.h>
 
+#include "../include/dataLayer_USART.h"
+
 void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char type);
-unsigned char usart_receive_data(unsigned char* data_buffer);
+void clearMessage();
 
 void init_dataLayer() {
 	USART_Init_Transceiver();
@@ -47,30 +49,39 @@ void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char ty
 	USART_Transmit(checksum);
 }
 
-unsigned char usart_receive_data(unsigned char* data_buffer) {
+unsigned char usart_receive_data() {
+	clearMessage();
 	set_Receiver();
 
 	char checksum = 0;
-	char length;
-	length = USART_Receive();
-	*data_buffer = length;
-	checksum += length;
-	data_buffer++;
+	msg.length = USART_Receive();
+	checksum += msg.length;
 
-	unsigned char type = USART_Receive();
-	*data_buffer = type;
-	checksum += type;
-	data_buffer++;
+	msg.type = USART_Receive();
+	checksum += msg.type;
 
 	// Parse first byte for msg length
-	for (char i = 0; i < length; i++) {
-		*data_buffer = USART_Receive();
-		checksum += *data_buffer;
-		data_buffer++;
+	for (char i = 0; i < msg.length; i++) {
+		msg.data[i] = USART_Receive();
+		checksum += msg.data[i];
 	}
 
 	// Checksum
-	*data_buffer = USART_Receive();
+	msg.checksum = USART_Receive();
+
+	if (msg.checksum != checksum) {
+		return CODE_CHECKSUM_ERROR_USART;
+	}
 
 	return CODE_OK;
+}
+
+void clearMessage() {
+	msg.checksum = 0;
+	msg.type = 0;
+	msg.length = 0;
+
+	for (int i = 0; i < BUFFER_SIZE; i++) {
+		msg.data[i] = 0;
+	}
 }

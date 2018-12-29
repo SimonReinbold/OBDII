@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <error_defs.h>
 
-#include "../include/dataLayer.h"
-#include "../../PhysicalLayer/include/physicalLayer.h"
+#include "../include/dataLayer_KWP2000.h"
+#include "../../PhysicalLayer/include/physicalLayer_KWP2000.h"
 
 unsigned char error;
 
@@ -22,6 +22,8 @@ void init_dataLayer(){
 
 /*********************************************************************
 ** Initialise Communication using "Fast Init"
+*
+* returns: CODE_OK or specific error code
 *********************************************************************/
 unsigned char start_communication_fastInit(unsigned char* data, unsigned char nbytes) {
 
@@ -34,6 +36,14 @@ unsigned char start_communication_fastInit(unsigned char* data, unsigned char nb
 
 	// Receive Section
 	error = receive_msg(FAST_INIT_BITRATE);
+	if (error != CODE_OK) {
+		return error;
+	}
+
+	// Check for negative response
+	if (incoming.service_id != 0xC1) {
+		return CODE_NEGATIVE_RESPONSE;
+	}
 
 	return error;
 }
@@ -76,6 +86,7 @@ unsigned char receive_msg(int bitRate) {
 	unsigned char length;
 
 	clear_msg();
+	unsigned char* dataStreamPtr = incoming.dataStream;
 
 	// Get Format byte
 	error = receive_byte(bitRate);
@@ -84,6 +95,7 @@ unsigned char receive_msg(int bitRate) {
 		return error;
 	}
 	incoming.format_byte = incoming_byte;
+	*dataStreamPtr++ = incoming_byte;
 	checksum += incoming.format_byte;
 
 	/* Get case idx
@@ -109,6 +121,7 @@ unsigned char receive_msg(int bitRate) {
 		}
 
 		incoming.target = incoming_byte;
+		*dataStreamPtr++ = incoming_byte;
 		checksum += incoming.target;
 
 		error = receive_byte(bitRate);
@@ -118,6 +131,7 @@ unsigned char receive_msg(int bitRate) {
 		}
 
 		incoming.source = incoming_byte;
+		*dataStreamPtr++ = incoming_byte;
 		checksum += incoming.source;
 	}
 
@@ -130,6 +144,7 @@ unsigned char receive_msg(int bitRate) {
 		}
 
 		incoming.length = incoming_byte;
+		*dataStreamPtr++ = incoming_byte;
 		checksum += incoming.length;
 		length = incoming.length;
 	}
@@ -150,11 +165,13 @@ unsigned char receive_msg(int bitRate) {
 		if (data_idx == 0) {
 			// SID
 			incoming.service_id = incoming_byte;
+			*dataStreamPtr++ = incoming_byte;
 			checksum += incoming.service_id;
 		}
 		else {
 			// Data bytes
 			incoming.data[data_idx - 1] = incoming_byte;
+			*dataStreamPtr++ = incoming_byte;
 			checksum += incoming.data[data_idx - 1];
 		}
 		
@@ -168,10 +185,13 @@ unsigned char receive_msg(int bitRate) {
 	}
 
 	incoming.checksum = incoming_byte;
+	*dataStreamPtr++ = incoming_byte;
 	
+	incoming.dataStreamLength = (dataStreamPtr - &(incoming.dataStream[0])) * sizeof(unsigned char);
+
 	// Compare checksum value
 	if (incoming.checksum != checksum) {
-		error = CODE_CHECKSUM_ERROR;
+		error = CODE_CHECKSUM_ERROR_KWP2000;
 	}
 
 	return error;
