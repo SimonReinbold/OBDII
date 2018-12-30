@@ -14,10 +14,10 @@ struct decodedMessage {
 	unsigned char length;
 	unsigned char data[BUFFER_SIZE];
 	unsigned char checksum;
-} msg;
+} msg_USART;
 
 void init_dataLayer_USART();
-void reply();
-void executeRequest();
+void replyUSART(unsigned char status, unsigned char* reply_data, unsigned char nbytes);
+unsigned char receiveAndParseUSART();
 
 #endif //!_DECODEUSART_H_

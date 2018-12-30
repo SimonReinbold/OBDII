@@ -2,6 +2,7 @@
 #define _DATALAYER_KWP2000_H_
 
 void init_dataLayer();
+void wake_up_unit();
 unsigned char start_communication_fastInit(unsigned char* data, unsigned char nbytes);
 unsigned char stop_communication();
 unsigned char handleRequest(unsigned char* request, unsigned char nbytes);

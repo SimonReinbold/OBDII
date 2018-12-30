@@ -1,16 +1,11 @@
 #include <USART/include/USART.h>
 #include <error_defs.h>
-#include <instructionSet.h>
 
 #include "../include/dataLayer_USART.h"
-#include "../../../KWP2000/ApplicationLayer/include/applicationLayer_KWP2000.h"
-#include "../../../KWP2000/DataLayer/include/dataLayer_KWP2000.h"
 
 void clearMessage();
 unsigned char decodeMessage();
-void instruction();
-void regular();
-void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char type);
+void usart_send_data(unsigned char type, unsigned char* data, unsigned char nbytes);
 void usart_receive_data(unsigned char* data_buffer);
 
 void init_dataLayer_USART() {
@@ -21,39 +16,24 @@ void init_dataLayer_USART() {
 }
 
 void clearMessage() {
-	msg.checksum = 0;
-	msg.type = 0;
-	msg.length = 0;
+	msg_USART.checksum = 0;
+	msg_USART.type = 0;
+	msg_USART.length = 0;
 
 	for (int i = 0; i < BUFFER_SIZE; i++) {
-		msg.data[i] = 0;
+		msg_USART.data[i] = 0;
 	}
 }
 
-void executeRequest() {
+unsigned char receiveAndParseUSART() {
 	// Wait for instructions
 	usart_receive_data(uart_buffer);
 
-	reply_type = decodeMessage();
-
-	// Set default error for reply
-	reply_size = 0;
-	
-	if (reply_type != CODE_OK) {
-		return;
-	}
-	
-	// Check for instruction
-	if (msg.type != REGULAR_INSTRUCTION) {
-		instruction();
-	}
-	else {
-		regular();
-	}
+	return decodeMessage();
 }
 
-void reply() {
-	usart_send_data(reply_data, reply_size, reply_type);
+void replyUSART(unsigned char status, unsigned char* reply_data, unsigned char nbytes) {
+	usart_send_data(status, reply_data, nbytes);
 }
 
 /* 
@@ -64,58 +44,24 @@ void reply() {
 unsigned char decodeMessage() {
 	clearMessage();
 
-	msg.length = uart_buffer[0];
-	msg.checksum += msg.length;
-	msg.type = uart_buffer[1];
-	msg.checksum += msg.type;
+	msg_USART.length = uart_buffer[0];
+	msg_USART.checksum += msg_USART.length;
+	msg_USART.type = uart_buffer[1];
+	msg_USART.checksum += msg_USART.type;
 
-	for (int i = 0; i < msg.length; i++) {
-		msg.data[i] = uart_buffer[i+2];
-		msg.checksum += msg.data[i];
+	for (int i = 0; i < msg_USART.length; i++) {
+		msg_USART.data[i] = uart_buffer[i+2];
+		msg_USART.checksum += msg_USART.data[i];
 	}
 
-	if (msg.checksum != uart_buffer[msg.length + 2]) {
+	if (msg_USART.checksum != uart_buffer[msg_USART.length + 2]) {
 		return CODE_CHECKSUM_ERROR_USART;
 	}
 	
 	return CODE_OK;
 }
 
-/*
-* Executes the desired instruction including the corresponing special execution
-* Calls KWP2000 Application Layer functions
-*
-* If return == CODE_OK set reply to CODE_SUCCESS
-* Else set reply to CODE_FAILED
-*
-*/
-void instruction() {	
-	reply_size = 0; // Size is zero if request fails
-	switch (msg.type) {
-		case FAST_INIT_INSTRUCTION:
-			reply_type = init_diagnose(msg.data, msg.length);
-			//if (reply_type == CODE_OK) {
-			for (unsigned char i = 0; i < incoming.dataStreamLength; i++) {
-				reply_data[i] = incoming.dataStream[i];
-			}
-			reply_size = incoming.dataStreamLength;
-			//}
-	}
-}
-
-void regular() {
-	reply_type = parseRequest(msg.data, msg.length);
-	if (reply_type != CODE_OK) {
-		reply_size = 0; // Failed request, return and transmit error code
-		return;
-	}
-	for (unsigned char i = 0; i < incoming.dataStreamLength; i++) {
-		reply_data[i] = incoming.dataStream[i];
-	}
-	reply_size = incoming.dataStreamLength;
-}
-
-void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char type) {
+void usart_send_data(unsigned char type, unsigned char* data, unsigned char nbytes) {
 	set_Transmitter();
 
 	char checksum = 0;
