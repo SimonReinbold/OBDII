@@ -18,6 +18,8 @@ Session_KWP2000* newSession(unsigned char target) {
 	Session_KWP2000* tmp = malloc(sizeof(Session_KWP2000));
 	tmp->headerType = 0xC0;
 	tmp->target = target;
+	tmp->keybytes[0] = 0x00;
+	tmp->keybytes[1] = 0x00;
 
 	// Reset supported Requests
 	resetSupportedRequestArray(tmp->supportedRequests.SID01, sizeof(tmp->supportedRequests.SID01));
@@ -65,15 +67,21 @@ unsigned char request_Session_KWP2000(Session_KWP2000* session, unsigned char* d
 	// Supported action is requested build header
 	unsigned char header_size = 1; // Format Byte
 	
-	if ( !(session->keybytes[1] & 0x0E) )					return CODE_KEYBYTE_ERROR;		// No header type supported ?! Error
-	if ( !(session->keybytes[1] & 0x03) )					return CODE_KEYBYTE_ERROR;		// No length information supported ?! Error
-	if ( !(session->keybytes[1] & 0x02) && nbytes > 63 )	return CODE_NOT_IMPLEMENTED;	// Message too big for single request and length byte not suported
-
-	if ( session->keybytes[1] & 0x08 )						header_size += 2;				// Address Info
-	if ( !(session->keybytes[1] & 0x01) || nbytes > 63 )	header_size += 1;				// Length Byte
+	if (data[0] != 0x81) {
+		// Normal request
+		if (!(session->keybytes[1] & 0x0E))						return CODE_KEYBYTE_ERROR;		// No header type supported ?! Error
+		if (!(session->keybytes[1] & 0x03))						return CODE_KEYBYTE_ERROR;		// No length information supported ?! Error
+		if ( !(session->keybytes[1] & 0x02) && nbytes > 63 )	return CODE_NOT_IMPLEMENTED;	// Message too big for single request and length byte not suported
+		if ( session->keybytes[1] & 0x08 )						header_size += 2;				// Address Info
+		if ( !(session->keybytes[1] & 0x01) || nbytes > 63 )	header_size += 1;				// Length Byte
+	}
+	else {
+		// First message -> startCommunication request without length byte
+		header_size = 3;
+	}
 
 	// Build full header
-	unsigned char *msg = malloc(header_size+nbytes);
+	unsigned char *msg = (unsigned char*)malloc(header_size+nbytes);
 	unsigned char* msgPtr  = msg;
 	
 	*msgPtr = session->headerType;

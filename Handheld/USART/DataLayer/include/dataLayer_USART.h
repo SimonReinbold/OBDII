@@ -15,10 +15,7 @@ void init_dataLayer();
 * E.g. Fast init requires a wake up pattern before the message is sent
 * Compare instructionSet.h for available instructions
 */
-void usart_send_instruction(unsigned char* data, unsigned char nbytes, unsigned char instruction);
-
-// Commands directly cause the request beeing transferred to the receiver
-void usart_send_command(unsigned char* data, unsigned char nbytes);
+void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char type);
 
 unsigned char usart_receive_data();
 

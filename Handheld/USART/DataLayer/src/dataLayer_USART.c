@@ -18,14 +18,6 @@ void init_dataLayer() {
 	USART_Init_Transceiver();
 }
 
-void usart_send_instruction(unsigned char* data, unsigned char nbytes, unsigned char instruction) {
-	usart_send_data(data, nbytes, instruction);
-}
-
-void usart_send_command(unsigned char* data, unsigned char nbytes) {
-	usart_send_data(data, nbytes, REGULAR_INSTRUCTION);
-}
-
 void usart_send_data(unsigned char* data, unsigned char nbytes, unsigned char type) {
 	set_Transmitter();
 

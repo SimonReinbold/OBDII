@@ -6,7 +6,7 @@
 #include "../LCD/lcd-routines.h"
 #include "Buttons/buttonHandler.h"
 #include "Menu/Menu.h"
-#include "../USART/ApplicationLayer/include/applicationLayer_USART.h"
+#include "ApplicationLayer_KWP2000/include/ApplicationLayer_KWP2000.h"
 #include "../USART/DataLayer/include/dataLayer_USART.h"
 
 void boot();
@@ -20,6 +20,7 @@ int main() {
 	while (1) {
 		waitForButtonRelease();
 		waitForButtonPress();
+		waitForButtonRelease();
 		switch (button_pressed) {
 		case 1:
 			if (currentNode->before != NULL) {
@@ -44,7 +45,6 @@ int main() {
 			}
 			break;
 		}
-		waitForButtonRelease();
 		showMenu();
 	}
 }
@@ -52,7 +52,7 @@ int main() {
 void boot() {
 	lcd_init();
 	init_buttons();
-	init_applicationLayer();
+	init_applicationLayer_KWP2000();
 	createMenus();
 
 	show_version();

@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "Menu.h"
-#include "../../USART/ApplicationLayer/include/applicationLayer_USART.h"
+#include "../ApplicationLayer_KWP2000/include/ApplicationLayer_KWP2000.h"
 
 #define XSTR(x) #x
 #define STR(x) XSTR(x)

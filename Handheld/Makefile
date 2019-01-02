@@ -6,7 +6,7 @@ GIT_VERSION := $(shell git describe --always --tags)
 SHOW_CHARS = 8
 
 TARGET  = handheld_device
-SOURCES = main.c Menu.c buttonHandler.c lcd-routines.c USART.c applicationLayer_USART.c dataLayer_USART.c
+SOURCES = main.c Menu.c buttonHandler.c lcd-routines.c USART.c ApplicationLayer_KWP2000.c dataLayer_USART.c
 
 PROGRAMMER = arduino
 MCU = atmega328p

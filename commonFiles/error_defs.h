@@ -21,6 +21,7 @@
 #define CODE_NONEXISTENT_PID		0x23
 #define CODE_KEYBYTE_ERROR			0x24
 
+#define CODE_MANUAL_STOP			0xFE
 #define CODE_NOT_IMPLEMENTED		0xFF
 
 #endif // !_ERROR_DEFS_H

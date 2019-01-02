@@ -5,8 +5,9 @@
 
 #include "../include/SessionHandler_KWP2000.h"
 #include "../include/Session_KWP2000.h"
+#include "../../DataLayer/include/dataLayer_KWP2000.h"
 
-#define MAX_SESSIONS	10
+#define MAX_SESSIONS	5
 
 Session_KWP2000* getSessionByTargetID(unsigned char target);
 Session_KWP2000* startNewSession(unsigned char target);
@@ -16,8 +17,9 @@ Session_KWP2000** activeSessionsArray;
 unsigned char activeSessions;
 
 void init_SessionHandler_KWP2000() {
-	*activeSessionsArray = (Session_KWP2000*)malloc(MAX_SESSIONS * sizeof(Session_KWP2000*));
+	activeSessionsArray = (Session_KWP2000**)malloc(MAX_SESSIONS * sizeof(Session_KWP2000*));
 	activeSessions = 0;
+	init_dataLayer();
 }
 
 void destroy_SessionHandler_KWP2000() {

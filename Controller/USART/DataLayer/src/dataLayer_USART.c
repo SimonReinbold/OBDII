@@ -28,7 +28,7 @@ void clearMessage() {
 unsigned char receiveAndParseUSART() {
 	// Wait for instructions
 	usart_receive_data(uart_buffer);
-
+	
 	return decodeMessage();
 }
 
@@ -53,7 +53,7 @@ unsigned char decodeMessage() {
 		msg_USART.data[i] = uart_buffer[i+2];
 		msg_USART.checksum += msg_USART.data[i];
 	}
-
+	
 	if (msg_USART.checksum != uart_buffer[msg_USART.length + 2]) {
 		return CODE_CHECKSUM_ERROR_USART;
 	}
@@ -93,13 +93,13 @@ void usart_receive_data(unsigned char* data_buffer) {
 	*data_buffer = length;
 	checksum += length;
 	data_buffer++;
-
+	
 	char type;
 	type = USART_Receive();
 	*data_buffer = type;
 	checksum += type;
 	data_buffer++;
-
+	
 	// Parse first byte for msg length
 	for (char i = 0; i < length; i++) {
 		*data_buffer = USART_Receive();
