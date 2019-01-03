@@ -9,6 +9,7 @@
 void init_buttons();
 unsigned char waitForButtonPress();
 unsigned char waitForButtonRelease();
+void enableManualStop();
 
 #define BUTTON_REG	DDRD
 #define BUTTON_PORT PORTD

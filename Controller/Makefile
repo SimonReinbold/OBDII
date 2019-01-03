@@ -6,7 +6,7 @@ GIT_VERSION := $(shell git describe --always --tags)
 SHOW_CHARS = 8
 
 TARGET  = obdii
-SOURCES = main.c dataLayer_USART.c USART.c Settings.c ProtocolSelector.c SessionHandler_KWP2000.c Session_KWP2000.c dataLayer_KWP2000.c physicalLayer_KWP2000.c
+SOURCES = main.c dataLayer_USART.c physicalLayer_USART.c Settings.c ProtocolSelector.c SessionHandler_KWP2000.c Session_KWP2000.c dataLayer_KWP2000.c physicalLayer_KWP2000.c
 
 PROGRAMMER = arduino
 MCU = atmega328p
@@ -18,7 +18,7 @@ CC = avr-gcc
 
 CFLAGS = -c -idirafter'C:\Users\Simon\Documents\Projects\Programming\OBDII\commonFiles' -std=c99 -MD -DF_CPU=$(F_CPU) -DGIT_VERSION=$(GIT_VERSION) -DVERS_CHARS=$(SHOW_CHARS) -DSERIAL_BAUD=$(SERIAL_BAUD)
 VPATH = $(shell find -mindepth 1 -maxdepth 10 -type d)
-VPATH += ../commonFiles/USART/src/
+VPATH += ../commonFiles/USART/PhysicalLayer/src/ ../commonFiles/USART/DataLayer/src/
 #$(info VPATH: $(VPATH))
 BPATH = build
 

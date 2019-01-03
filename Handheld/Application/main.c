@@ -1,5 +1,6 @@
 #include <string.h>
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 #include <error_defs.h>
 
@@ -7,7 +8,8 @@
 #include "Buttons/buttonHandler.h"
 #include "Menu/Menu.h"
 #include "ApplicationLayer_KWP2000/include/ApplicationLayer_KWP2000.h"
-#include "../USART/DataLayer/include/dataLayer_USART.h"
+
+#include <USART/DataLayer/include/dataLayer_USART.h>
 
 void boot();
 void decodeError(unsigned char error);
@@ -22,28 +24,28 @@ int main() {
 		waitForButtonPress();
 		waitForButtonRelease();
 		switch (button_pressed) {
-		case 1:
-			if (currentNode->before != NULL) {
-				currentNode = currentNode->before;
-			}
-			break;
-		case 2:
-			if (currentNode->next != NULL) {
-				currentNode = currentNode->next;
-			}
-			break;
-		case 3:
-			error = currentNode->execute();
-			lcd_clear();
-			decodeError(error);
-			lcd_display(&msg.data[3],msg.length-4,2);
-			_delay_ms(1000);
-			if (error == CODE_OK) {
-				if (currentNode->submenu) {
-					menuLayerDown();
+			case 1:
+				if (currentMenuItem->before != NULL) {
+					currentMenuItem = currentMenuItem->before;
 				}
-			}
-			break;
+				break;
+			case 2:
+				if (currentMenuItem->next != NULL) {
+					currentMenuItem = currentMenuItem->next;
+				}
+				break;
+			case 3:
+				error = currentMenuItem->execute();
+				lcd_clear();
+				decodeError(error);
+				lcd_display(&msg_USART.data[3], msg_USART.length-4,2);
+				_delay_ms(1000);
+				//if (error == CODE_OK) {
+					if (currentMenuItem->submenu) {
+						menuLayerDown();
+					}
+				//}
+				break;
 		}
 		showMenu();
 	}
@@ -53,6 +55,7 @@ void boot() {
 	lcd_init();
 	init_buttons();
 	init_applicationLayer_KWP2000();
+	init_dataLayer_USART();
 	createMenus();
 
 	show_version();
@@ -60,6 +63,7 @@ void boot() {
 	MCUSR &= ~(1 << WDRF);
 
 	showMenu();
+	sei();
 }
 
 void decodeError(unsigned char error) {
@@ -85,13 +89,16 @@ void decodeError(unsigned char error) {
 		lcd_string("NO DATA");
 		break;
 	case CODE_CHECKSUM_ERROR_KWP2000:
-		lcd_string("CHECKSUM ERROR KWP2000");
+		lcd_string("CHECK ERR KWP");
 		break;
 	case CODE_CHECKSUM_ERROR_USART:
-		lcd_string("CHECKSUM ERROR USART");
+		lcd_string("CHECK ERR USART");
 		break;
 	case CODE_NEGATIVE_RESPONSE:
 		lcd_string("START COM FAILED");
+		break;
+	case CODE_MANUAL_STOP:
+		lcd_string("MANUAL STOP");
 		break;
 	default:
 		lcd_display(&error, 1, 2);

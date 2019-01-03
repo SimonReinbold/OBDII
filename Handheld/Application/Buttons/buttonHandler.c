@@ -7,7 +7,9 @@
 ***************************************************************/
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
+#include <USART/PhysicalLayer/include/physicalLayer_USART.h>
 
 #include "buttonHandler.h"
 
@@ -15,6 +17,8 @@
 
 unsigned char checkButtonPressed();
 unsigned char checkButtonReleased();
+void enableINT0();
+void disableINT0();
 
 void init_buttons() {
 	BUTTON_REG &= ~(1 << BUTTON_1);
@@ -25,6 +29,20 @@ void init_buttons() {
 
 	BUTTON_REG &= ~(1 << BUTTON_3);
 	BUTTON_PORT |= (1 << BUTTON_3);
+}
+
+void enableManualStop() {
+	enableINT0();
+}
+
+void enableINT0() {
+	EICRA |= 1 << ISC01;
+	EIFR |= 1 << INTF0;
+	EIMSK |= 1 << INT0;
+}
+
+void disableINT0() {
+	EIMSK &= ~(1 << INT0);
 }
 
 unsigned char checkButtonPressed() {
@@ -61,4 +79,9 @@ unsigned char waitForButtonRelease() {
 	while (!checkButtonReleased());
 	_delay_ms(DEBOUNCE_DELAY);
 	while (!checkButtonReleased());
+}
+
+ISR(INT0_vect) {
+	setManualRXTrigger();
+	disableINT0();
 }

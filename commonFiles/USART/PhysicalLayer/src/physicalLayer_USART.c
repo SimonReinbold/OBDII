@@ -1,6 +1,20 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "../include/USART.h"
+#include "../include/physicalLayer_USART.h"
+
+volatile unsigned char manualRXTrigger;
+
+void setManualRXTrigger() {
+	manualRXTrigger = 1;
+}
+
+void clearManualRXTrigger() {
+	manualRXTrigger = 0;
+}
+
+unsigned char isSetManualRXTrigger() {
+	return manualRXTrigger;
+}
 
 void USART_Init_Receiver() {
 	USART_Init();
@@ -31,6 +45,7 @@ void USART_Init()
 	/* Set frame format: 8data, 2stop bit */
 	UCSR0C = (1<<USBS0)|(3<<UCSZ00);
 	disable_interrupts();
+	clearManualRXTrigger();
 }
 
 void set_Receiver() {
@@ -78,7 +93,7 @@ void USART_Transmit(unsigned char data)
 unsigned char USART_Receive(void)
 {
 	/* Wait for data to be received */
-	while (!(UCSR0A & (1 << RXC0)));
+	while ( !(UCSR0A & (1 << RXC0)) && !(isSetManualRXTrigger()) );
 
 	/* Get and return received data from buffer */
 	return UDR0;

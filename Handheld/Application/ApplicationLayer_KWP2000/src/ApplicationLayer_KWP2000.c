@@ -8,19 +8,19 @@
 #include <error_defs.h>
 #include <instructionSet.h>
 #include <string.h>
+#include <USART/DataLayer/include/dataLayer_USART.h>
 
-#include "../../../USART/DataLayer/include/dataLayer_USART.h"
 #include "../include/ApplicationLayer_KWP2000.h"
+#include "../../../Application/Buttons/buttonHandler.h"
 
-#include "../../Buttons/buttonHandler.h"
-
+// Display periodic requests
 #include <util/delay.h>
 #include "../../../LCD/lcd-routines.h"
 
 unsigned char obd_fast_init();
 
 void init_applicationLayer_KWP2000() {
-	init_dataLayer();
+	// Nothing to do
 }
 
 /*********************************************************************
@@ -43,16 +43,8 @@ unsigned char obd_fast_init() {
 	data[0] = 0x33;
 	data[1] = 0x81;
 
-	//enableManualStop();
-
-	usart_send_data(data, 2, REQUEST);
+	usart_send_data(REQUEST, data, 2);
 	unsigned char error = usart_receive_data();
-	/*
-	if (isManualTriggerActive()) {
-		disableManualStop();
-		return CODE_MANUAL_STOP; // Return if manually stopped
-	}
-	*/
 
 	// USART Checksum error
 	if (error != CODE_OK) {
@@ -60,7 +52,7 @@ unsigned char obd_fast_init() {
 	}
 
 	// No USART error, return the error code in msg.type
-	return msg.type;
+	return msg_USART.type;
 }
 
 /*********************************************************************
@@ -73,17 +65,17 @@ unsigned char requestPIDs() {
 
 	for (unsigned char i = 0; i < 6; i++) {
 		data[2] = i * 0x20;
-
-		usart_send_data(data, 3,REQUEST);
+		
+		usart_send_data(REQUEST, data, 3);
 		unsigned char error = usart_receive_data();
-
+		
 		// USART Checksum error
 		if (error != CODE_OK) {
 			return error;
 		}
 	}
 
-	return msg.type;
+	return msg_USART.type;
 }
 
 /*********************************************************************
@@ -95,23 +87,17 @@ unsigned char intake_air_Temp() {
 	data[1] = 0x01;
 	data[2] = 0x0F;
 	
-	//enableManualStop();
-	while (1) {
-		usart_send_data(data, 3,REQUEST);
-		unsigned char error = usart_receive_data();
+	enableManualStop();
 
-		/*
-		if (isManualTriggerActive()) {
-			disableManualStop();
-			return CODE_MANUAL_STOP; // Return if manually stopped
-		}
-		*/
+	while (1) {
+		usart_send_data(REQUEST, data, 3);
+		unsigned char error = usart_receive_data();
 
 		// USART Checksum error
 		if (error != CODE_OK) return error;
 
 		// Calc Temperature
-		int temperature = (((int)msg.data[1])-40); // A - 40 degrees celcius
+		int temperature = (((int)msg_USART.data[1])-40); // A - 40 degrees celcius
 
 		// Display
 		lcd_clear();
@@ -123,7 +109,7 @@ unsigned char intake_air_Temp() {
 		_delay_ms(500);
 	}
 
-	return msg.type;
+	return msg_USART.type;
 }
 
 /*********************************************************************
@@ -138,7 +124,7 @@ unsigned char stop_communication() {
 	data[0] = 0x33;
 	data[1] = 0x82;
 
-	usart_send_data(data, 2, REQUEST);
+	usart_send_data(REQUEST, data, 2);
 	unsigned char error = usart_receive_data();
 
 	// USART Checksum error
@@ -146,5 +132,5 @@ unsigned char stop_communication() {
 		return error;
 	}
 
-	return msg.type;
+	return msg_USART.type;
 }

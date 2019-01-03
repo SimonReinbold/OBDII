@@ -35,7 +35,7 @@ void wake_up_unit() {
 * returns: CODE_OK or specific error code
 *********************************************************************/
 unsigned char start_communication_fastInit(unsigned char* data, unsigned char nbytes) {
-
+	
 	wake_up();
 
 	error = send_msg(data, nbytes, FAST_INIT_BITRATE);

@@ -58,12 +58,12 @@ unsigned char request_Session_KWP2000(Session_KWP2000* session, unsigned char* d
 	if (nbytes > 256) {
 		return CODE_DATA_ERROR;
 	}
-
+	
 	unsigned char error = checkSupport(session, data, nbytes);
 	if (error != CODE_OK) {
 		return error;
 	}
-
+	
 	// Supported action is requested build header
 	unsigned char header_size = 1; // Format Byte
 	

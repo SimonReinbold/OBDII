@@ -7,17 +7,17 @@
 
 typedef struct menu_t {
 	char name[17];
-	struct node_t* first;
+	struct menuItem_t* first;
 	struct menu_t* parent;
 }Menu;
 
-typedef struct node_t {
+typedef struct menuItem_t {
 	char name[17];
 	unsigned char(*execute)();
 	Menu* submenu;
-	struct node_t * next;
-	struct node_t * before;
-}Node;
+	struct menuItem_t * next;
+	struct menuItem_t * before;
+}MenuItem;
 
 void showMenu();
 void createMenus();
@@ -26,6 +26,6 @@ unsigned char menuLayerUp();
 unsigned char menuLayerDown();
 
 Menu* currentMenu;
-Node* currentNode;
+MenuItem* currentMenuItem;
 
 #endif // ! _MENU_H_

@@ -16,7 +16,7 @@ const char version[] = STR(GIT_VERSION);
 unsigned char doNothing();
 unsigned char reboot();
 
-Node* newNode();
+MenuItem* newMenuItem();
 Menu* newMenu();
 
 void showMenu() {
@@ -24,15 +24,14 @@ void showMenu() {
 	lcd_setcursor(0, 1);
 	lcd_string(currentMenu->name);
 	lcd_setcursor(0, 2);
-	lcd_string(currentNode->name);
+	lcd_string(currentMenuItem->name);
 }
 
-Node* newNode() {
-	Node* dummy = malloc(sizeof(Node));
+MenuItem* newMenuItem() {
+	MenuItem* dummy = malloc(sizeof(MenuItem));
 	dummy->before = NULL;
 	dummy->next = NULL;
 	strcpy(dummy->name, "Unknown");
-	dummy->execute = NULL;
 	dummy->submenu = 0;
 	dummy->execute = doNothing;
 	return dummy;
@@ -47,7 +46,7 @@ Menu* newMenu() {
 }
 
 void createMenus() {
-	Node* back = newNode();
+	MenuItem* back = newMenuItem();
 	strcpy(back->name, "Back");
 	back->execute = menuLayerUp;
 
@@ -55,13 +54,13 @@ void createMenus() {
 	Menu* topLvl = newMenu();
 	strcpy(topLvl->name, "-----OBDII------");
 
-	Node* restart = newNode();
+	MenuItem* restart = newMenuItem();
 	strcpy(restart->name, "Restart");
 	restart->execute = reboot;
-	Node* init = newNode();
+	MenuItem* init = newMenuItem();
 	strcpy(init->name, "Init Diag");
 	init->execute = start_communication_fastInit;
-	Node* showVersion = newNode();
+	MenuItem* showVersion = newMenuItem();
 	strcpy(showVersion->name, "Show Version");
 	showVersion->execute = show_version;
 
@@ -79,36 +78,41 @@ void createMenus() {
 	diagLvl->parent = topLvl;
 	strcpy(diagLvl->name, "----Diagnose----");
 
-	Node* checkPID = newNode();
+	MenuItem* checkPID = newMenuItem();
 	strcpy(checkPID->name, "Check PID");
 	checkPID->execute = requestPIDs;
-	Node* stopCom = newNode();
+	MenuItem* stopCom = newMenuItem();
 	strcpy(stopCom->name, "Stop COM");
 	stopCom->execute = stop_communication;
+	MenuItem* intakeAirTemp = newMenuItem();
+	strcpy(intakeAirTemp->name, "Intake Air Temp");
+	intakeAirTemp->execute = intake_air_Temp;
 
 	checkPID->next = stopCom;
-	stopCom->next = back;
+	stopCom->next = intakeAirTemp;
+	intakeAirTemp->next = back;
 
 	stopCom->before = checkPID;
-	back->before = stopCom;
+	intakeAirTemp->before = stopCom;
+	back->before = intakeAirTemp;
 
 	diagLvl->first = checkPID;
 
 	currentMenu = topLvl;
-	currentNode = currentMenu->first;
+	currentMenuItem = currentMenu->first;
 }
 
 unsigned char menuLayerUp() {
 	if (currentMenu->parent != NULL) {
 		currentMenu = currentMenu->parent;
-		currentNode = currentMenu->first;
+		currentMenuItem = currentMenu->first;
 	}
 }
 
 unsigned char menuLayerDown() {
-	if (currentNode->submenu != NULL) {
-		currentMenu = currentNode->submenu;
-		currentNode = currentMenu->first;
+	if (currentMenuItem->submenu != NULL) {
+		currentMenu = currentMenuItem->submenu;
+		currentMenuItem = currentMenu->first;
 	}
 
 }

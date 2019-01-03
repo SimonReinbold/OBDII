@@ -31,3 +31,9 @@ unsigned char USART_Receive(void);
 void clearTransmitCompleteFlag();
 
 unsigned char checkTransmitComplete();
+
+void setManualRXTrigger();
+
+void clearManualRXTrigger();
+
+unsigned char isSetManualRXTrigger();
