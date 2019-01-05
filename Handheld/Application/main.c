@@ -12,12 +12,12 @@
 #include <USART/DataLayer/include/dataLayer_USART.h>
 
 void boot();
-void decodeError(unsigned char error);
+void decodeStatus(unsigned char error);
 
 int main() {
 	boot();
 	
-	unsigned char error;
+	unsigned char status;
 
 	while (1) {
 		waitForButtonRelease();
@@ -35,18 +35,14 @@ int main() {
 				}
 				break;
 			case 3:
-				error = currentMenuItem->execute();
-				decodeError(error);
-				_delay_ms(1000);
-				//if (error == CODE_OK) {
+				status = currentMenuItem->execute();
+				decodeStatus(status);
+				_delay_ms(500);
+				if (status == CODE_OK) {
 					if (currentMenuItem->submenu) {
 						menuLayerDown();
 					}
-				//}
-				/*
-				else {
-					
-				}*/
+				}
 				break;
 		}
 		showMenu();
@@ -68,22 +64,31 @@ void boot() {
 	sei();
 }
 
-void decodeError(unsigned char error) {
-	if (error == CODE_OK){
-		lcd_setcursor(14, 2);
-		lcd_data('O');
-		lcd_data('K');
-	}
-	else {
-		lcd_setcursor(10, 2);
-		lcd_data('E');
-		lcd_data('r');
-		lcd_data('r');
-		lcd_data(' ');
-		HextoASCII(&error);
+void decodeStatus(unsigned char status) {
+	switch (status){
+		case CODE_OK:
+			lcd_setcursor(14, 2);
+			lcd_data('O');
+			lcd_data('K');
+			break;
+		case CODE_MANUAL_STOP:
+			lcd_setcursor(12, 2);
+			lcd_data('S');
+			lcd_data('T');
+			lcd_data('O');
+			lcd_data('P');
+			break;
+		default:
+			lcd_setcursor(10, 2);
+			lcd_data('E');
+			lcd_data('r');
+			lcd_data('r');
+			lcd_data(' ');
+			HextoASCII(&status);
+			break;
 	}
 	return;
-	switch (error)
+	switch (status)
 	{
 	case CODE_OK:
 		lcd_string("OK");
@@ -119,7 +124,7 @@ void decodeError(unsigned char error) {
 		lcd_string("KEYBYTE ERROR");
 		break;
 	default:
-		lcd_display(&error, 1, 2);
+		lcd_display(&status, 1, 2);
 		break;
 	}
 }
