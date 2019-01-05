@@ -12,14 +12,21 @@ unsigned char checkSupport(Session_KWP2000* session, unsigned char* data, unsign
 unsigned char isSupportedSID(Session_KWP2000* session, unsigned char SID);
 unsigned char hasPID(Session_KWP2000* session, unsigned char SID);
 unsigned char isSupportedPID(Session_KWP2000* session, unsigned char SID, unsigned char PID);
-void parseResponse(Session_KWP2000* session);
 
 Session_KWP2000* newSession(unsigned char target) {
-	Session_KWP2000* tmp = malloc(sizeof(Session_KWP2000));
-	tmp->headerType = 0xC0;
+	Session_KWP2000* tmp = (Session_KWP2000*)malloc(sizeof(Session_KWP2000));
 	tmp->target = target;
 	tmp->keybytes[0] = 0x00;
 	tmp->keybytes[1] = 0x00;
+
+	switch (target){
+		case 0x33:
+			tmp->headerType = 0xC0;
+			break;
+		default:
+			tmp->headerType = 0x80;
+			break;
+	}
 
 	// Reset supported Requests
 	resetSupportedRequestArray(tmp->supportedRequests.SID01, sizeof(tmp->supportedRequests.SID01));
@@ -32,6 +39,8 @@ Session_KWP2000* newSession(unsigned char target) {
 	tmp->supportedRequests.SID08 = 0;
 	resetSupportedRequestArray(tmp->supportedRequests.SID09, sizeof(tmp->supportedRequests.SID09));
 	tmp->supportedRequests.SID10 = 0;
+
+	return tmp;
 }
 
 unsigned char* resetSupportedRequestArray(unsigned char* arr, unsigned char size) {
@@ -96,42 +105,20 @@ unsigned char request_Session_KWP2000(Session_KWP2000* session, unsigned char* d
 
 	// Append data
 	for (unsigned char i = 0; i < nbytes; i++) {
-		*msgPtr = data[i];
+		*msgPtr++ = data[i];
 	}
 
-	error = handleRequest(msg, (nbytes + header_size) );
-	if (error == CODE_DATA_ERROR) {
-		// Unit might be asleep - wake up again
+	if (data[0] == 0x81) {
+		// Wake up pattern for Fast Init
 		wake_up_unit();
-		error = handleRequest(msg, (nbytes + header_size));
+	}
+	error = handleRequest(msg, (nbytes + header_size) );
+
+	if (error != CODE_OK && data[0] == 0x01 && data[1] != 0x0F) {
+		return CODE_DEBUG_PREFIX | (data[1] / 0x20);
 	}
 	free(msg);
-	parseResponse(session);
 	return error;
-}
-
-void parseResponse(Session_KWP2000* session) {
-	unsigned char idx;
-	switch (incoming.service_id){
-		case 0x7F:
-			// Negative response, do nothing
-			break;
-		case 0xC1:
-			// Fast Init response
-			session->keybytes[0] = incoming.data[0];
-			session->keybytes[1] = incoming.data[1];
-			break;
-		case 0x41:
-			if (incoming.data[0] % 0x20 != 0) return; // Not a supported PID request
-			idx = incoming.data[0] / (unsigned char)8;
-			session->supportedRequests.SID01[0] = incoming.data[idx++];
-			session->supportedRequests.SID01[1] = incoming.data[idx++];
-			session->supportedRequests.SID01[2] = incoming.data[idx++];
-			session->supportedRequests.SID01[3] = incoming.data[idx];
-			break;
-		default:
-			break;
-	}
 }
 
 unsigned char checkSupport(Session_KWP2000* session, unsigned char* data, unsigned char nbytes) {
@@ -221,7 +208,8 @@ unsigned char isSupportedPID(Session_KWP2000* session, unsigned char SID, unsign
 }
 
 unsigned char* getReplyProtocol_Session_KWP2000() {
-	return incoming.data;
+	unsigned char* ptr = incoming.data;
+	return ptr;
 }
 
 unsigned char getReplyLengthProtocol_Session_KWP2000() {

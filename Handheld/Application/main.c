@@ -36,15 +36,17 @@ int main() {
 				break;
 			case 3:
 				error = currentMenuItem->execute();
-				lcd_clear();
 				decodeError(error);
-				lcd_display(&msg_USART.data[3], msg_USART.length-4,2);
 				_delay_ms(1000);
 				//if (error == CODE_OK) {
 					if (currentMenuItem->submenu) {
 						menuLayerDown();
 					}
 				//}
+				/*
+				else {
+					
+				}*/
 				break;
 		}
 		showMenu();
@@ -67,7 +69,20 @@ void boot() {
 }
 
 void decodeError(unsigned char error) {
-	lcd_setcursor(0, 1);
+	if (error == CODE_OK){
+		lcd_setcursor(14, 2);
+		lcd_data('O');
+		lcd_data('K');
+	}
+	else {
+		lcd_setcursor(10, 2);
+		lcd_data('E');
+		lcd_data('r');
+		lcd_data('r');
+		lcd_data(' ');
+		HextoASCII(&error);
+	}
+	return;
 	switch (error)
 	{
 	case CODE_OK:
@@ -99,6 +114,9 @@ void decodeError(unsigned char error) {
 		break;
 	case CODE_MANUAL_STOP:
 		lcd_string("MANUAL STOP");
+		break;
+	case CODE_KEYBYTE_ERROR:
+		lcd_string("KEYBYTE ERROR");
 		break;
 	default:
 		lcd_display(&error, 1, 2);

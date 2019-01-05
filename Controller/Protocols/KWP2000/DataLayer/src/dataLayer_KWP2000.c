@@ -91,8 +91,7 @@ void clear_msg(void) {
 ** Receive message
 *********************************************************************/
 unsigned char receive_msg(int bitRate) {
-	unsigned char checksum = 0;
-	unsigned char length;
+	char checksum = 0;
 	incoming.dataStreamLength = 0;
 
 	clear_msg();
@@ -160,16 +159,16 @@ unsigned char receive_msg(int bitRate) {
 		*dataStreamPtr++ = incoming_byte;
 		(incoming.dataStreamLength)++;
 		checksum += incoming.length;
-		length = incoming.length;
+		
 	}
 	else {
-		length = incoming.format_byte & 0x3F;
+		incoming.length = incoming.format_byte & 0x3F;
 	}
 
 	// SID and data left 
 	// defined by length variable filled with either the length byte or the length defined in FMT
 
-	for (int data_idx = 0; data_idx < length; data_idx++) {
+	for (int data_idx = 0; data_idx < incoming.length; data_idx++) {
 		error = receive_byte(bitRate);
 
 		if (error != CODE_OK) {

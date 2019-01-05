@@ -1,6 +1,7 @@
 #include <string.h>
 #include <util/delay.h>
 #include <avr/io.h>
+#include <error_defs.h>
 #include "../../LCD/lcd-routines.h"
 
 #include <stdlib.h>
@@ -107,6 +108,7 @@ unsigned char menuLayerUp() {
 		currentMenu = currentMenu->parent;
 		currentMenuItem = currentMenu->first;
 	}
+	return CODE_OK;
 }
 
 unsigned char menuLayerDown() {
@@ -114,7 +116,7 @@ unsigned char menuLayerDown() {
 		currentMenu = currentMenuItem->submenu;
 		currentMenuItem = currentMenu->first;
 	}
-
+	return CODE_OK;
 }
 
 unsigned char doNothing() {

@@ -34,14 +34,13 @@ void usart_send_data(unsigned char type, unsigned char* data, unsigned char nbyt
 	USART_Transmit(type);
 	
 	for (char i = 0; i < nbytes; i++) {
-		checksum += *data;
-		USART_Transmit(*data++);
+		checksum += data[i];
+		USART_Transmit(data[i]);
 
 		if (i == nbytes - 1) {
 			clearTransmitCompleteFlag();
 		}
 	}
-	while (!(checkTransmitComplete()));
 	enable_transmit_complete_Interrupt();
 	USART_Transmit(checksum);	
 }
@@ -67,6 +66,11 @@ unsigned char usart_receive_data() {
 	char checksum = USART_Receive();
 	if (msg_USART.checksum != checksum) {
 		return CODE_CHECKSUM_ERROR_USART;
+	}
+
+	if (isSetManualRXTrigger()) {
+		clearManualRXTrigger();
+		return CODE_MANUAL_STOP;
 	}
 
 	return CODE_OK;

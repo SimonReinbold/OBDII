@@ -14,7 +14,7 @@ struct incoming_dat {
 	unsigned char length;
 	unsigned char service_id;
 	unsigned char data[255];
-	unsigned char checksum;
+	char checksum;
 	unsigned char dataStream[255];
 	unsigned char dataStreamLength;
 }incoming;

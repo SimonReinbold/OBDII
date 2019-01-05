@@ -26,9 +26,9 @@ int main() {
 	while (1) {
 		// Wait for Handheld request
 		unsigned char status = usart_receive_data();
+
 		if (status != CODE_OK){
 			// Error in USART message, reply with error
-			PORTD |= 1 << PD7;
 			usart_send_data(status, NULL, 0);
 			continue;
 		}

@@ -3,7 +3,7 @@
 #
 
 GIT_VERSION := $(shell git describe --always --tags)
-SHOW_CHARS = 8
+SHOW_CHARS = 9
 
 TARGET  = handheld_device
 SOURCES = main.c Menu.c buttonHandler.c lcd-routines.c physicalLayer_USART.c dataLayer_USART.c ApplicationLayer_KWP2000.c 

@@ -103,10 +103,6 @@ void clearTransmitCompleteFlag() {
 	UCSR0A |= 1 << TXC0;
 }
 
-unsigned char checkTransmitComplete() {
-
-}
-
 ISR(USART_TX_vect) {
 	// Last byte transmission complete
 	// configure as receiver to wait for incoming data
