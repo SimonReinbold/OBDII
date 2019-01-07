@@ -6,7 +6,7 @@ GIT_VERSION := $(shell git describe --always --tags)
 SHOW_CHARS = 8
 
 TARGET  = obdii
-SOURCES = main.c dataLayer_USART.c physicalLayer_USART.c Settings.c ProtocolSelector.c SessionHandler_KWP2000.c Session_KWP2000.c dataLayer_KWP2000.c physicalLayer_KWP2000.c
+SOURCES = main.c dataLayer_USART.c physicalLayer_USART.c Settings.c ProtocolSelector.c SessionHandler_KWP2000.c Session_KWP2000.c dataLayer_KWP2000.c physicalLayer_KWP2000.c iso_tp.c
 
 PROGRAMMER = arduino
 MCU = atmega328p

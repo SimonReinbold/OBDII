@@ -2,6 +2,10 @@
 ** Confirmation/Error Values
 *********************************************************************/
 
+#ifndef NULL
+#define NULL (void*)0
+#endif // !NULL
+
 #ifndef _ERROR_DEFS_H
 #define _ERROR_DEFS_H
 
@@ -20,6 +24,7 @@
 #define CODE_UNSUPPORTED_PID		0x22
 #define CODE_NONEXISTENT_PID		0x23
 #define CODE_KEYBYTE_ERROR			0x24
+#define CODE_ISO_TP_ERROR			0x25
 
 #define CODE_DEBUG_PREFIX			0xD0
 

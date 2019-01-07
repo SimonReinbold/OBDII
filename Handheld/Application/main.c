@@ -72,7 +72,9 @@ void decodeStatus(unsigned char status) {
 			lcd_data('K');
 			break;
 		case CODE_MANUAL_STOP:
-			lcd_setcursor(12, 2);
+			lcd_setcursor(10, 2);
+			lcd_data(' ');
+			lcd_data(' ');
 			lcd_data('S');
 			lcd_data('T');
 			lcd_data('O');

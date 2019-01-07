@@ -85,16 +85,26 @@ void createMenus() {
 	MenuItem* stopCom = newMenuItem();
 	strcpy(stopCom->name, "Stop COM");
 	stopCom->execute = stop_communication;
+	MenuItem* showDTCs = newMenuItem();
+	strcpy(showDTCs->name, "Show DTCs");
+	showDTCs->execute = requestDTCs;
+	MenuItem* showPermDTCs = newMenuItem();
+	strcpy(showPermDTCs->name, "Show Perm DTCs");
+	showPermDTCs->execute = requestPermDTCs;
 	MenuItem* intakeAirTemp = newMenuItem();
 	strcpy(intakeAirTemp->name, "Intake Air Temp");
 	intakeAirTemp->execute = intake_air_Temp;
 
 	checkPID->next = stopCom;
-	stopCom->next = intakeAirTemp;
+	stopCom->next = showDTCs;
+	showDTCs->next = showPermDTCs;
+	showPermDTCs->next = intakeAirTemp;
 	intakeAirTemp->next = back;
 
 	stopCom->before = checkPID;
-	intakeAirTemp->before = stopCom;
+	showDTCs->before = stopCom;
+	showPermDTCs->before = showDTCs;
+	intakeAirTemp->before = showPermDTCs;
 	back->before = intakeAirTemp;
 
 	diagLvl->first = checkPID;

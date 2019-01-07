@@ -120,13 +120,13 @@ void init_timer1() {
 ** First bit is send in this method
 ** Further bits are send in TIMER0 Interrupt
 *********************************************************************/
-unsigned char send_byte(unsigned char byte, int bitRate){	
+unsigned char send_byte(unsigned char byte){	
 	// Set status bit to Transmit (not Recieve)
 	start_Transmit();
 
 	SETSTATUS(BUSY);
 
-	helper.load = CALC_TIMER0_LOAD(bitRate); // Loading value for TIMER0 to time bit length
+	helper.load = CALC_TIMER0_LOAD(FAST_INIT_BITRATE); // Loading value for TIMER0 to time bit length
 	helper.buffer = byte; // Buffer data to handle in interrupt
 	helper.bit_cnt = 10; // Send 1 start bit, 8 data bit, 1 stop bit
 	
@@ -148,9 +148,9 @@ unsigned char send_byte(unsigned char byte, int bitRate){
 ** First bit is send in this method
 ** Further bits are send in TIMER0 Interrupt
 *********************************************************************/
-unsigned char receive_byte(int bitRate) {
-	helper.bitRate = bitRate;
-	helper.load = CALC_TIMER0_LOAD(bitRate); // Loading value for TIMER0 to time bit length
+unsigned char receive_byte() {
+	helper.bitRate = FAST_INIT_BITRATE;
+	helper.load = CALC_TIMER0_LOAD(FAST_INIT_BITRATE); // Loading value for TIMER0 to time bit length
 	
 	start_Receive();
 	// Maximum Waiting time is P2_MAX - Start TIMER1

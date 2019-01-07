@@ -8,8 +8,6 @@ unsigned char error;
 
 unsigned char obd_fast_init();
 
-unsigned char receive_msg(int bitRate);
-unsigned char send_msg(unsigned char *data, unsigned char n_bytes, int bitRate);
 char parse_format_byte(unsigned char format_byte);
 void clear_msg(void);
 
@@ -38,13 +36,13 @@ unsigned char start_communication_fastInit(unsigned char* data, unsigned char nb
 	
 	wake_up();
 
-	error = send_msg(data, nbytes, FAST_INIT_BITRATE);
+	error = send_msg(data, nbytes);
 	if (error != CODE_OK) {
 		return error;
 	}
 
 	// Receive Section
-	error = receive_msg(FAST_INIT_BITRATE);
+	error = receive_msg();
 	if (error != CODE_OK) {
 		return error;
 	}
@@ -52,24 +50,6 @@ unsigned char start_communication_fastInit(unsigned char* data, unsigned char nb
 	// Check for negative response
 	if (incoming.service_id != 0xC1) {
 		return CODE_NEGATIVE_RESPONSE;
-	}
-
-	return error;
-}
-
-/*********************************************************************
-** Handle Request
-*********************************************************************/
-unsigned char handleRequest(unsigned char* request, unsigned char nbytes) {
-	error = send_msg(request, nbytes, FAST_INIT_BITRATE);
-	if (error != CODE_OK) {
-		return error;
-	}
-
-	// Receive Section
-	error = receive_msg(FAST_INIT_BITRATE);
-	if (error != CODE_OK) {
-		return error;
 	}
 
 	return error;
@@ -85,20 +65,20 @@ void clear_msg(void) {
 		incoming.data[i] = 0;
 	}
 	incoming.checksum = 0;
+	incoming.dataStreamLength = 0;
 }
 
 /*********************************************************************
 ** Receive message
 *********************************************************************/
-unsigned char receive_msg(int bitRate) {
-	char checksum = 0;
-	incoming.dataStreamLength = 0;
+unsigned char receive_msg() {
+	unsigned char checksum = 0;
 
 	clear_msg();
 	unsigned char* dataStreamPtr = &incoming.dataStream[0];
 
 	// Get Format byte
-	error = receive_byte(bitRate);
+	error = receive_byte();
 
 	if (error != CODE_OK) {
 		return error;
@@ -124,7 +104,7 @@ unsigned char receive_msg(int bitRate) {
 
 	// Fill target and source
 	if (case_idx == 3 || case_idx == 4) {
-		error = receive_byte(bitRate);
+		error = receive_byte();
 
 		if (error != CODE_OK) {
 			return error;
@@ -135,7 +115,7 @@ unsigned char receive_msg(int bitRate) {
 		(incoming.dataStreamLength)++;
 		checksum += incoming.target;
 
-		error = receive_byte(bitRate);
+		error = receive_byte();
 
 		if (error != CODE_OK) {
 			return error;
@@ -149,7 +129,7 @@ unsigned char receive_msg(int bitRate) {
 
 	// Length byte included
 	if (case_idx == 2 || case_idx == 4) {
-		error = receive_byte(bitRate);
+		error = receive_byte();
 
 		if (error != CODE_OK) {
 			return error;
@@ -169,7 +149,7 @@ unsigned char receive_msg(int bitRate) {
 	// defined by length variable filled with either the length byte or the length defined in FMT
 
 	for (int data_idx = 0; data_idx < incoming.length; data_idx++) {
-		error = receive_byte(bitRate);
+		error = receive_byte();
 
 		if (error != CODE_OK) {
 			return error;
@@ -178,22 +158,18 @@ unsigned char receive_msg(int bitRate) {
 		if (data_idx == 0) {
 			// SID
 			incoming.service_id = incoming_byte;
-			*dataStreamPtr++ = incoming_byte;
-			(incoming.dataStreamLength)++;
-			checksum += incoming.service_id;
 		}
 		else {
 			// Data bytes
 			incoming.data[data_idx - 1] = incoming_byte;
-			*dataStreamPtr++ = incoming_byte;
-			(incoming.dataStreamLength)++;
-			checksum += incoming.data[data_idx - 1];
 		}
-		
+		*dataStreamPtr++ = incoming_byte;
+		(incoming.dataStreamLength)++;
+		checksum += incoming_byte;
 	}
 
 	// Checksum
-	error = receive_byte(bitRate);
+	error = receive_byte();
 
 	if (error != CODE_OK) {
 		return error;
@@ -202,6 +178,8 @@ unsigned char receive_msg(int bitRate) {
 	incoming.checksum = incoming_byte;
 	*dataStreamPtr++ = incoming_byte;
 	(incoming.dataStreamLength)++;
+
+	checksum %= 256;
 
 	// Compare checksum value
 	if (incoming.checksum != checksum) {
@@ -214,14 +192,14 @@ unsigned char receive_msg(int bitRate) {
 /*********************************************************************
 ** Send message
 *********************************************************************/
-unsigned char send_msg(unsigned char *data, unsigned char n_bytes, int bitRate) {
+unsigned char send_msg(unsigned char *data, unsigned char n_bytes) {
 	// Calculate checksum while sending byte by byte
 	unsigned char checksum;
 	checksum = 0;
 	for (unsigned int i = 0; i < n_bytes; i++) {
 		checksum += *data;
 		
-		error = send_byte(*data++, bitRate);
+		error = send_byte(*data++);
 
 		if (error != CODE_OK) {
 			return error;
@@ -229,7 +207,7 @@ unsigned char send_msg(unsigned char *data, unsigned char n_bytes, int bitRate) 
 	}
 	checksum %= 256;
 	// Send last byte - checksum
-	error = send_byte(checksum, bitRate);
+	error = send_byte(checksum);
 
 	return error;
 }
@@ -253,4 +231,16 @@ char parse_format_byte(unsigned char format_byte) {
 		case_idx = 4;
 	}
 	return case_idx;
+}
+
+unsigned char* receive_msg_returnArray() {
+	unsigned char error = receive_msg();
+	if (error != CODE_OK) {
+		return NULL;
+	}
+	return incoming.data;
+}
+
+unsigned char getIncomingDataLength() {
+	return incoming.length;
 }

@@ -11,3 +11,5 @@ unsigned char start_communication_fastInit();
 unsigned char requestPIDs();
 unsigned char stop_communication();
 unsigned char intake_air_Temp();
+unsigned char requestDTCs();
+unsigned char requestPermDTCs();

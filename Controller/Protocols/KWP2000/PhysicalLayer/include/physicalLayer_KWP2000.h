@@ -132,8 +132,8 @@
 
 void wake_up();
 void init_physicalLayer();
-unsigned char send_byte(unsigned char byte, int bitRate);
-unsigned char receive_byte(int bitRate);
+unsigned char send_byte(unsigned char byte);
+unsigned char receive_byte();
 void wait_idle(unsigned int TMP_TIME);
 void wait(unsigned int TMP_TIME);
 
