@@ -57,7 +57,7 @@ Session_KWP2000* newSession(unsigned char target) {
 	tmp->supportedRequests.SID07 = 0;
 	tmp->supportedRequests.SID08 = 0;
 	resetSupportedRequestArray(tmp->supportedRequests.SID09, sizeof(tmp->supportedRequests.SID09));
-	tmp->supportedRequests.SID0A = 1;
+	tmp->supportedRequests.SID0A = 0;
 	tmp->supportedRequests.SID10 = 0;
 
 	return tmp;

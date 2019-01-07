@@ -78,36 +78,63 @@ void createMenus() {
 	init->submenu = diagLvl;
 	diagLvl->parent = topLvl;
 	strcpy(diagLvl->name, "----Diagnose----");
-
-	MenuItem* checkPID = newMenuItem();
-	strcpy(checkPID->name, "Check PID");
-	checkPID->execute = requestPIDs;
-	MenuItem* stopCom = newMenuItem();
-	strcpy(stopCom->name, "Stop COM");
-	stopCom->execute = stop_communication;
+	
 	MenuItem* showDTCs = newMenuItem();
 	strcpy(showDTCs->name, "Show DTCs");
 	showDTCs->execute = requestDTCs;
-	MenuItem* showPermDTCs = newMenuItem();
-	strcpy(showPermDTCs->name, "Show Perm DTCs");
-	showPermDTCs->execute = requestPermDTCs;
+
+	MenuItem* engineLoad = newMenuItem();
+	strcpy(engineLoad->name, "Engine Load");
+	engineLoad->execute = calcEngineLoad;
+	MenuItem* coolantTemp = newMenuItem();
+	strcpy(coolantTemp->name, "Coolant Temp");
+	coolantTemp->execute = engineCoolantTemp;
+	MenuItem* intakePressure = newMenuItem();
+	strcpy(intakePressure->name, "Intake Abs Press");
+	intakePressure->execute = intakeManifoldAbsolutePressure;
+	MenuItem* engineRPMItem = newMenuItem();
+	strcpy(engineRPMItem->name, "Engine RPM");
+	engineRPMItem->execute = engineRPM;
+	MenuItem* vehicleSpeedItem = newMenuItem();
+	strcpy(vehicleSpeedItem->name, "Vehicle Speed");
+	vehicleSpeedItem->execute = vehicleSpeed;
 	MenuItem* intakeAirTemp = newMenuItem();
 	strcpy(intakeAirTemp->name, "Intake Air Temp");
 	intakeAirTemp->execute = intake_air_Temp;
+	MenuItem* airFlowRate = newMenuItem();
+	strcpy(airFlowRate->name, "Air Flow Rate");
+	airFlowRate->execute = mafAirFlowRate;
+	MenuItem* throttlePos = newMenuItem();
+	strcpy(throttlePos->name, "Throttle Pos.");
+	throttlePos->execute = throttlePosition;
 
-	checkPID->next = stopCom;
-	stopCom->next = showDTCs;
-	showDTCs->next = showPermDTCs;
-	showPermDTCs->next = intakeAirTemp;
-	intakeAirTemp->next = back;
+	MenuItem* stopCom = newMenuItem();
+	strcpy(stopCom->name, "Stop COM");
+	stopCom->execute = stop_communication;
 
-	stopCom->before = checkPID;
-	showDTCs->before = stopCom;
-	showPermDTCs->before = showDTCs;
-	intakeAirTemp->before = showPermDTCs;
-	back->before = intakeAirTemp;
+	showDTCs->next = engineLoad;
+	engineLoad->next = coolantTemp;
+	coolantTemp->next = intakePressure;
+	intakePressure->next = engineRPMItem;
+	engineRPMItem->next = vehicleSpeedItem;
+	vehicleSpeedItem->next = intakeAirTemp;
+	intakeAirTemp->next = airFlowRate;
+	airFlowRate->next = throttlePos;
+	throttlePos->next = stopCom;
+	stopCom->next = back;
 
-	diagLvl->first = checkPID;
+	back->before = stopCom;
+	stopCom->before = throttlePos;
+	throttlePos->before = airFlowRate;
+	airFlowRate->before = intakeAirTemp;
+	intakeAirTemp->before = vehicleSpeedItem;
+	vehicleSpeedItem->before = engineRPMItem;
+	engineRPMItem->before = intakePressure;
+	intakePressure->before = coolantTemp;
+	coolantTemp->before = engineLoad;
+	engineLoad->before = showDTCs;
+
+	diagLvl->first = showDTCs;
 
 	currentMenu = topLvl;
 	currentMenuItem = currentMenu->first;
