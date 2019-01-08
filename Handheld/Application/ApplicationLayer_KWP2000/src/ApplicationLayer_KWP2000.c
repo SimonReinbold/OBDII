@@ -19,6 +19,8 @@
 #include <util/delay.h>
 #include "../../../LCD/lcd-routines.h"
 
+#define STANDARD_UPDATE_RATE_ms					500
+
 #define TARGET_FAST_INIT						0x33
 #define TARGET_ECU								0x01
 
@@ -96,13 +98,6 @@ unsigned char requestPIDs() {
 		usart_send_data(REQUEST, data, 3);
 		unsigned char error = usart_receive_data();
 
-		lcd_clear();
-		lcd_setcursor(0, 1);
-		HextoASCII(&data[2]);
-		lcd_display(&msg_USART.data[3], msg_USART.length - 3, 2);
-		_delay_ms(1000);
-
-		// USART Checksum error
 		if (error != CODE_OK && msg_USART.type != CODE_OK) {
 			return error;
 		}
@@ -155,7 +150,7 @@ unsigned char calcEngineLoad() {
 			lcd_data(' ');
 			lcd_data(0x25); // % sign
 		}
-		_delay_ms(500);
+		_delay_ms(STANDARD_UPDATE_RATE_ms);
 	}
 
 	return msg_USART.type;
@@ -206,7 +201,7 @@ unsigned char engineCoolantTemp() {
 			lcd_data(0b11011111);
 			lcd_data('C');
 		}
-		_delay_ms(500);
+		_delay_ms(STANDARD_UPDATE_RATE_ms);
 	}
 
 	return msg_USART.type;
@@ -259,7 +254,7 @@ unsigned char intakeManifoldAbsolutePressure() {
 			lcd_data(' ');
 			lcd_string("bar");
 		}
-		_delay_ms(500);
+		_delay_ms(STANDARD_UPDATE_RATE_ms);
 	}
 
 	return msg_USART.type;
@@ -305,12 +300,12 @@ unsigned char engineRPM() {
 			lcd_string("Engine RPM");
 			lcd_setcursor(0, 2);
 			char buffer[5];
-			dtostrf(rpm, 4, 2, buffer);
+			dtostrf(rpm, 4, 0, buffer);
 			lcd_string(buffer);
 			lcd_data(' ');
-			lcd_string("bar");
+			lcd_string("rpm");
 		}
-		_delay_ms(500);
+		_delay_ms(STANDARD_UPDATE_RATE_ms);
 	}
 
 	return msg_USART.type;
@@ -358,7 +353,7 @@ unsigned char vehicleSpeed() {
 			lcd_append_decimal(speed);
 			lcd_string(" km/h");
 		}
-		_delay_ms(500);
+		_delay_ms(STANDARD_UPDATE_RATE_ms);
 	}
 
 	return msg_USART.type;
@@ -409,7 +404,7 @@ unsigned char intake_air_Temp() {
 			lcd_data(0b11011111);
 			lcd_data('C');
 		}
-		_delay_ms(500);
+		_delay_ms(STANDARD_UPDATE_RATE_ms);
 	}
 
 	return msg_USART.type;
@@ -454,13 +449,12 @@ unsigned char mafAirFlowRate() {
 			lcd_setcursor(0, 1);
 			lcd_string("Air Flow Rate");
 			lcd_setcursor(0, 2);
-			char buffer[5];
-			dtostrf(rate, 4, 2, buffer);
+			char buffer[4];
+			dtostrf(rate, 3, 0, buffer);
 			lcd_string(buffer);
-			lcd_data(' ');
-			lcd_string("bar");
+			lcd_string(" g/s");
 		}
-		_delay_ms(500);
+		_delay_ms(STANDARD_UPDATE_RATE_ms);
 	}
 
 	return msg_USART.type;
@@ -510,7 +504,7 @@ unsigned char throttlePosition() {
 			lcd_data(' ');
 			lcd_data(0x25); // % sign
 		}
-		_delay_ms(500);
+		_delay_ms(STANDARD_UPDATE_RATE_ms);
 	}
 
 	return msg_USART.type;
