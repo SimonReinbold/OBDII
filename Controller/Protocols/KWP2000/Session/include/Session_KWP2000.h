@@ -24,6 +24,7 @@ typedef struct Session_KWP2000_Struct Session_KWP2000;
 struct Session_KWP2000_Struct {
 	unsigned char headerType;
 	unsigned char target;
+	unsigned char source;
 	unsigned char keybytes[2];
 	unsigned char requestSID;
 	unsigned char* requestData;

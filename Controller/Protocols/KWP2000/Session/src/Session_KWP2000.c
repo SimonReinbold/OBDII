@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <error_defs.h>
+#include <string.h> // For memcpy function
 
 #include "../include/Session_KWP2000.h"
 #include "../include/SessionHandler_KWP2000.h"
@@ -32,6 +33,7 @@ Session_KWP2000* getActiveSession() {
 Session_KWP2000* newSession(unsigned char target) {
 	Session_KWP2000* tmp = (Session_KWP2000*)malloc(sizeof(Session_KWP2000));
 	tmp->target = target;
+	tmp->source = TESTER_ADDRESS;
 	tmp->keybytes[0] = 0x00;
 	tmp->keybytes[1] = 0x00;
 	tmp->requestSID = 0x00;
@@ -89,16 +91,41 @@ unsigned char handle_session_request(unsigned char* data, unsigned char nbytes) 
 	}
 	
 	if (getActiveSession()->requestSID == 0x03) {
-		//error = receive_msg();
-		error = iso_tp_receiveData(receive_msg_returnArray, getIncomingDataLength, request_Session_KWP2000);
+		error = iso_tp_receiveData(receive_msg, getIncomingData, getIncomingDataLength, request_Session_KWP2000);
 		ISO_TP_RECEIVED* iso_tp_rec = getISO_TP_struct();
-		if (error != 0 || iso_tp_rec->length > MAX_DATA_LENGTH) return CODE_ISO_TP_ERROR; // Dynamic length not implemented
+		
+		if (error != 0 && !((error & 0xF0) == 0xD0)) { return error; }				// Recieve msg error in ISO TP
+		if (error != 0 && ((error & 0xF0) == 0xD0)) { return CODE_ISO_TP_ERROR; }	// ISO TP Error
 
-		// Set received Data to the incoming struct
-		for (int i = 0; i < iso_tp_rec->length; i++) {
-			incoming.data[i] = iso_tp_rec->data[0];
+		if (iso_tp_rec->length > 254)		return CODE_ISO_TP_ERROR;				// Too many DTCs for the current implementations
+
+		// DTCs received and expected to be less than 254 bytes of data -> put into data structures and change length
+		incoming.length = iso_tp_rec->length + 1;
+	
+		incoming.dataStream[0] = incoming.format_byte & 0xC0;
+		incoming.dataStream[1] = incoming.target;
+		incoming.dataStream[2] = incoming.source;
+		unsigned char length_byte_flag = 0;
+		if (iso_tp_rec->length > 62) {
+			// Extra length byte
+			incoming.dataStream[3] = incoming.length;
+			length_byte_flag = 1;
+
 		}
-		incoming.length = iso_tp_rec->length;
+		else {
+			incoming.dataStream[0] |= incoming.length;
+		}
+		incoming.dataStream[3 + length_byte_flag] = incoming.service_id;
+		memcpy(&incoming.dataStream[4 + length_byte_flag], iso_tp_rec->data, iso_tp_rec->length);
+		memcpy(incoming.data, iso_tp_rec->data, iso_tp_rec->length);
+
+		unsigned char checksum;
+		for (unsigned int i = 0; i < (4 + length_byte_flag + iso_tp_rec->length); i++) {
+			checksum += incoming.dataStream[i];
+		}
+		incoming.checksum = checksum;
+		incoming.dataStream[4 + length_byte_flag + iso_tp_rec->length] = checksum;
+		incoming.dataStreamLength = 4 + length_byte_flag + iso_tp_rec->length + 1;
 	}
 	else {
 		error = receive_msg();
@@ -139,7 +166,7 @@ unsigned char* prependHeader(Session_KWP2000* session, unsigned char* data, unsi
 
 	if (header_size == 3 || header_size == 4) {
 		*msgPtr++ = session->target;
-		*msgPtr++ = TESTER_ADDRESS;
+		*msgPtr++ = session->source;
 	}
 
 	if (header_size == 2 || header_size == 4) *msgPtr++ = (nbytes + 1);
@@ -232,7 +259,7 @@ unsigned char isSupportedSID(Session_KWP2000* session, unsigned char SID) {
 }
 
 unsigned char hasPID(Session_KWP2000* session, unsigned char SID) {
-	if (SID == 1 || SID == 2 || SID == 5 || SID == 9) {
+	if (SID == 0x01 || SID == 0x02 || SID == 0x05 || SID == 0x09) {
 		return 1;
 	}
 	return 0;
