@@ -16,6 +16,7 @@ void clear_msg(void);
 *********************************************************************/
 void init_dataLayer(){
 	init_physicalLayer();
+	clear_msg();
 }
 
 /*********************************************************************
@@ -59,11 +60,9 @@ void clear_msg(void) {
 	incoming.format_byte = 0;
 	incoming.target = 0;
 	incoming.source = 0;
+	incoming.header_size = 0;
 	incoming.length = 0;
 	incoming.service_id = 0;
-	for (int i = 0; i < 33; i++) {
-		incoming.data[i] = 0;
-	}
 	incoming.checksum = 0;
 	incoming.dataStreamLength = 0;
 }
@@ -73,9 +72,7 @@ void clear_msg(void) {
 *********************************************************************/
 unsigned char receive_msg() {
 	unsigned char checksum = 0;
-
 	clear_msg();
-	unsigned char* dataStreamPtr = &incoming.dataStream[0];
 
 	// Get Format byte
 	error = receive_byte();
@@ -84,11 +81,10 @@ unsigned char receive_msg() {
 		return error;
 	}
 	incoming.format_byte = incoming_byte;
-	*dataStreamPtr++ = incoming_byte;
-	(incoming.dataStreamLength)++;
+	incoming.dataStream[0] = incoming.format_byte;
 	checksum += incoming.format_byte;
 
-	/* Get case idx
+	/* Get header size
 	*
 	*	1: FMT SID DATA CS
 	*	2: FMT LEN SID DATA CS
@@ -96,14 +92,15 @@ unsigned char receive_msg() {
 	*	4: FMT TGT SRC LEN SID DATA CS
 	*
 	*/
-	char case_idx = parse_format_byte(incoming.format_byte);
+
+	incoming.header_size = parse_format_byte(incoming.format_byte);
 
 	/*
 	* Fill the message struct step by step
 	*/
 
 	// Fill target and source
-	if (case_idx == 3 || case_idx == 4) {
+	if (incoming.header_size >= 3) {
 		error = receive_byte();
 
 		if (error != CODE_OK) {
@@ -111,8 +108,7 @@ unsigned char receive_msg() {
 		}
 
 		incoming.target = incoming_byte;
-		*dataStreamPtr++ = incoming_byte;
-		(incoming.dataStreamLength)++;
+		incoming.dataStream[1] = incoming.target;
 		checksum += incoming.target;
 
 		error = receive_byte();
@@ -122,13 +118,12 @@ unsigned char receive_msg() {
 		}
 
 		incoming.source = incoming_byte;
-		*dataStreamPtr++ = incoming_byte;
-		(incoming.dataStreamLength)++;
+		incoming.dataStream[2] = incoming.source;
 		checksum += incoming.source;
 	}
 
 	// Length byte included
-	if (case_idx == 2 || case_idx == 4) {
+	if (incoming.header_size == 2 || incoming.header_size == 4) {
 		error = receive_byte();
 
 		if (error != CODE_OK) {
@@ -136,18 +131,16 @@ unsigned char receive_msg() {
 		}
 
 		incoming.length = incoming_byte;
-		*dataStreamPtr++ = incoming_byte;
-		(incoming.dataStreamLength)++;
+		incoming.dataStream[incoming.header_size - 1] = incoming.length;
 		checksum += incoming.length;
 		
 	}
 	else {
 		incoming.length = incoming.format_byte & 0x3F;
 	}
+	incoming.dataStreamLength = incoming.header_size + incoming.length + 1;
 
-	// SID and data left 
-	// defined by length variable filled with either the length byte or the length defined in FMT
-
+	// SID, Data and Checksum left 
 	for (int data_idx = 0; data_idx < incoming.length; data_idx++) {
 		error = receive_byte();
 
@@ -163,8 +156,7 @@ unsigned char receive_msg() {
 			// Data bytes
 			incoming.data[data_idx - 1] = incoming_byte;
 		}
-		*dataStreamPtr++ = incoming_byte;
-		(incoming.dataStreamLength)++;
+		incoming.dataStream[incoming.header_size + data_idx] = incoming_byte;
 		checksum += incoming_byte;
 	}
 
@@ -176,14 +168,25 @@ unsigned char receive_msg() {
 	}
 
 	incoming.checksum = incoming_byte;
-	*dataStreamPtr++ = incoming_byte;
-	(incoming.dataStreamLength)++;
+	incoming.dataStream[incoming.header_size + incoming.length] = incoming.checksum;
 
 	checksum %= 256;
 
 	// Compare checksum value
 	if (incoming.checksum != checksum) {
-		error = CODE_CHECKSUM_ERROR_KWP2000;
+		return CODE_CHECKSUM_ERROR_KWP2000;
+	}
+
+	// Check for negative response
+	if (incoming.service_id == ID_NEGATIVE_RESPONSE) {
+		if (incoming.length > 1 && 
+			( incoming.data[1] == ID_NO_SUPPORT1 || 
+				incoming.data[1] == ID_NO_SUPPORT2 || 
+				incoming.data[1] == ID_NO_SUPPORT3 || 
+				incoming.data[1] == ID_NO_SUPPORT4)) {
+			return CODE_NOT_SUPPORTED;
+		}
+		return CODE_NEGATIVE_RESPONSE;
 	}
 
 	return error;
@@ -233,14 +236,10 @@ char parse_format_byte(unsigned char format_byte) {
 	return case_idx;
 }
 
-unsigned char* receive_msg_returnArray() {
-	unsigned char error = receive_msg();
-	if (error != CODE_OK) {
-		return NULL;
-	}
+unsigned char* getIncomingData() {
 	return incoming.data;
 }
 
 unsigned char getIncomingDataLength() {
-	return incoming.length;
+	return (incoming.length - 1); // Data length excluding the SID
 }

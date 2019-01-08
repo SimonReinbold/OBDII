@@ -9,6 +9,8 @@
 #ifndef _ERROR_DEFS_H
 #define _ERROR_DEFS_H
 
+#define CODE_DEBUG_PREFIX			0xD0
+
 #define CODE_OK						0x00
 #define CODE_DATA_ERROR				0x01
 #define CODE_BUS_ERROR_START		0x02
@@ -24,10 +26,10 @@
 #define CODE_UNSUPPORTED_PID		0x22
 #define CODE_NONEXISTENT_PID		0x23
 #define CODE_KEYBYTE_ERROR			0x24
-#define CODE_ISO_TP_ERROR			0x25
+#define CODE_MEMORY_ERROR			0x25
+#define CODE_ISO_TP_ERROR			0x26
 
-#define CODE_DEBUG_PREFIX			0xD0
-
+#define CODE_NOT_SUPPORTED			0xFD
 #define CODE_MANUAL_STOP			0xFE
 #define CODE_NOT_IMPLEMENTED		0xFF
 

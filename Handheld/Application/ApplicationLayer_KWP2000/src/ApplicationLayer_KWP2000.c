@@ -98,6 +98,8 @@ unsigned char requestPIDs() {
 		usart_send_data(REQUEST, data, 3);
 		unsigned char error = usart_receive_data();
 
+		if (i > 0 && (msg_USART.type == CODE_NOT_SUPPORTED || msg_USART.type == CODE_UNSUPPORTED_PID)) return CODE_OK;
+
 		if (error != CODE_OK && msg_USART.type != CODE_OK) {
 			return error;
 		}
@@ -548,13 +550,17 @@ unsigned char requestDTCs() {
 	// USART Checksum error
 	if (error != CODE_OK) return error;
 	if (msg_USART.type != CODE_OK) return msg_USART.type;
+
+	unsigned char length_byte_flag = 0;
+	if ((msg_USART.data[0] & 0x3F) == 0x00) length_byte_flag++;
 	
-	int cross_sum = 0;
-	for (int i = HEADER_OFFSET; i < msg_USART.length - 1; i++) {
+	unsigned long cross_sum = 0;
+	int start = HEADER_OFFSET + length_byte_flag;
+	for (int i = start; i < msg_USART.length - 1; i++) {
 		cross_sum += msg_USART.data[i]; // Check if all bytes are zero -> only P0000 DTCs (not valid/no DTC)
 	}
 
-	if (msg_USART.length - 5 == 0 || cross_sum == 0) {
+	if (cross_sum == 0 || start == (msg_USART.length - 1)) {
 		lcd_clear();
 		lcd_setcursor(0, 1);
 		lcd_string("DTCs:");
@@ -575,7 +581,7 @@ unsigned char requestDTCs() {
 		lcd_append_decimal((currentDTC / 2) + 1);
 		lcd_data('.');
 		lcd_data(' ');
-		switch (msg_USART.data[currentDTC] >> 6)
+		switch (msg_USART.data[start + currentDTC] >> 6)
 		{
 		case 0:
 			lcd_data('P');
@@ -592,11 +598,11 @@ unsigned char requestDTCs() {
 		default:
 			break;
 		}
-		lcd_append_decimal((msg_USART.data[currentDTC] & 0x30) >> 4);
+		lcd_append_decimal((msg_USART.data[start + currentDTC] & 0x30) >> 4);
 		char buffer[2];
-		itoa(msg_USART.data[currentDTC] & 0x0F, buffer, 16);
+		itoa(msg_USART.data[start + currentDTC] & 0x0F, buffer, 16);
 		lcd_data(toupper(buffer[0]));
-		HextoASCII(&msg_USART.data[currentDTC+1]);
+		HextoASCII(&msg_USART.data[start + currentDTC+1]);
 
 		waitForButtonRelease();
 		waitForButtonPress();
@@ -608,7 +614,7 @@ unsigned char requestDTCs() {
 			}
 			break;
 		case 2:
-			if (currentDTC < msg_USART.length - 2) {
+			if (currentDTC < msg_USART.length - 3) {
 				currentDTC += 2;
 			}
 			break;
@@ -634,12 +640,16 @@ unsigned char requestPermDTCs() {
 	if (error != CODE_OK) return error;
 	if (msg_USART.type != CODE_OK) return msg_USART.type;
 
-	int cross_sum = 0;
-	for (int i = HEADER_OFFSET; i < msg_USART.length - 1; i++) {
+	unsigned char length_byte_flag = 0;
+	if ((msg_USART.data[0] & 0x3F) == 0x00) length_byte_flag++;
+
+	unsigned long cross_sum = 0;
+	int start = HEADER_OFFSET + length_byte_flag;
+	for (int i = start; i < msg_USART.length - 1; i++) {
 		cross_sum += msg_USART.data[i]; // Check if all bytes are zero -> only P0000 DTCs (not valid/no DTC)
 	}
 
-	if (msg_USART.length - 5 == 0 || cross_sum == 0) {
+	if (cross_sum == 0) {
 		lcd_clear();
 		lcd_setcursor(0, 1);
 		lcd_string("DTCs:");
@@ -660,7 +670,7 @@ unsigned char requestPermDTCs() {
 		lcd_append_decimal((currentDTC / 2) + 1);
 		lcd_data('.');
 		lcd_data(' ');
-		switch (msg_USART.data[currentDTC] >> 6)
+		switch (msg_USART.data[start + currentDTC] >> 6)
 		{
 		case 0:
 			lcd_data('P');
@@ -677,11 +687,11 @@ unsigned char requestPermDTCs() {
 		default:
 			break;
 		}
-		lcd_append_decimal((msg_USART.data[currentDTC] & 0x30) >> 4);
+		lcd_append_decimal((msg_USART.data[start + currentDTC] & 0x30) >> 4);
 		char buffer[2];
-		itoa(msg_USART.data[currentDTC] & 0x0F, buffer, 16);
+		itoa(msg_USART.data[start + currentDTC] & 0x0F, buffer, 16);
 		lcd_data(toupper(buffer[0]));
-		HextoASCII(&msg_USART.data[currentDTC + 1]);
+		HextoASCII(&msg_USART.data[start + currentDTC + 1]);
 
 		waitForButtonRelease();
 		waitForButtonPress();
@@ -693,7 +703,7 @@ unsigned char requestPermDTCs() {
 			}
 			break;
 		case 2:
-			if (currentDTC < msg_USART.length - 2) {
+			if (currentDTC < msg_USART.length - 3) {
 				currentDTC += 2;
 			}
 			break;
