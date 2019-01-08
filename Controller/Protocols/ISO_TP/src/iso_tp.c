@@ -69,8 +69,9 @@ unsigned char iso_tp_receiveData(unsigned char (*dataLayer_receiveData)(),
 		unsigned char flowControl[3];
 		flowControl[0] = 0x30 | 0x00;						// Type 3 and continue to send 0x00
 		flowControl[1] = 0;									// No stop between frames
-		flowControl[3] = 50;								// Separation time in ms
-		sendMsg(flowControl, 3);
+		flowControl[2] = 50;								// Separation time in ms
+		error = sendMsg(flowControl, 3);
+		if (error != 0)							return error;
 
 		// Received rest of data in several frames.
 		unsigned char frame_idx = 0;
@@ -81,7 +82,7 @@ unsigned char iso_tp_receiveData(unsigned char (*dataLayer_receiveData)(),
 
 			frame = getReceivedData();						// Pointer should not change, but just to be safe request it again
 
-			if ((frame[0] & 0xF0) != 2)			return 0xD2;	// Not a consecutive frame
+			if ((frame[0] >> 4) != 2)			return 0xD2;	// Not a consecutive frame
 			if ((frame[0] & 0x0F) != frame_idx) return 0xD3;	// expected different frame index
 
 			frame_idx = (frame_idx + 1) % 16;				// Count from 0 to 15 and then loop back to 0
