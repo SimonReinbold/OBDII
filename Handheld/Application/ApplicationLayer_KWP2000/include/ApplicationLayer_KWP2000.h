@@ -28,4 +28,5 @@ unsigned char throttlePosition();
 
 unsigned char stop_communication();
 unsigned char requestDTCs();
+unsigned char clearDTCs();
 unsigned char requestPermDTCs();
