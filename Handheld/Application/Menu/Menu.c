@@ -83,6 +83,10 @@ void createMenus() {
 	strcpy(showDTCs->name, "Show DTCs");
 	showDTCs->execute = requestDTCs;
 
+	MenuItem* clcDTCs = newMenuItem();
+	strcpy(clcDTCs->name, "Clear DTCs");
+	clcDTCs->execute = clearDTCs;
+
 	MenuItem* engineLoad = newMenuItem();
 	strcpy(engineLoad->name, "Engine Load");
 	engineLoad->execute = calcEngineLoad;
@@ -112,7 +116,8 @@ void createMenus() {
 	strcpy(stopCom->name, "Stop COM");
 	stopCom->execute = stop_communication;
 
-	showDTCs->next = engineLoad;
+	showDTCs->next = clcDTCs;
+	clcDTCs->next = engineLoad;
 	engineLoad->next = coolantTemp;
 	coolantTemp->next = intakePressure;
 	intakePressure->next = engineRPMItem;
@@ -132,8 +137,9 @@ void createMenus() {
 	engineRPMItem->before = intakePressure;
 	intakePressure->before = coolantTemp;
 	coolantTemp->before = engineLoad;
-	engineLoad->before = showDTCs;
-
+	engineLoad->before = clcDTCs;
+	clcDTCs->before = showDTCs;
+	
 	diagLvl->first = showDTCs;
 
 	currentMenu = topLvl;

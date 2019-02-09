@@ -27,6 +27,7 @@
 #define SID_FAST_INIT							0x81
 #define SID_SERVICE_01							0x01
 #define SID_SERVICE_03							0x03
+#define SID_SERVICE_04							0x04
 #define SID_SERVICE_0A							0x0A
 
 #define PID_CALC_ENGINE_LOAD					0x04
@@ -537,7 +538,7 @@ unsigned char stop_communication() {
 }
 
 /*********************************************************************
-** DTCs
+** Show DTCs
 *********************************************************************/
 unsigned char requestDTCs() {
 	unsigned char data[2];
@@ -623,6 +624,79 @@ unsigned char requestDTCs() {
 			break;
 		}
 	}
+}
+
+/*********************************************************************
+** Clear DTCs
+*********************************************************************/
+unsigned char clearDTCs() {
+
+	/* Safety check - ask again */
+	unsigned char checkState = 1;
+	lcd_clear();
+	lcd_setcursor(0, 1);
+	lcd_string("Are you sure?");
+	lcd_setcursor(0, 2);
+	lcd_string("yes");
+
+	unsigned char loop = 1;
+	while (loop) {
+		waitForButtonRelease();
+		waitForButtonPress();
+		waitForButtonRelease();
+		switch (button_pressed) {
+		case 1:
+			checkState = 1;
+			if (checkState != 0) {
+				lcd_clear();
+				lcd_setcursor(0, 1);
+				lcd_string("Are you sure?");
+				lcd_setcursor(0, 2);
+				lcd_string("yes");
+			}
+			break;
+		case 2:
+			checkState = 2;
+			if (checkState != 1) {
+				lcd_clear();
+				lcd_setcursor(0, 1);
+				lcd_string("Are you sure?");
+				lcd_setcursor(0, 2);
+				lcd_string("no");
+			}
+			break;
+		case 3:
+			if (checkState == 2) {
+				return CODE_OK;
+			}
+			loop = 0;
+			break;
+		}
+	}
+
+	lcd_clear();
+	lcd_setcursor(0, 1);
+	lcd_string("Deleting DTCs...");
+	_delay_ms(500);
+	
+	unsigned char data[2];
+	data[0] = TARGET_ECU;
+	data[1] = SID_SERVICE_04;
+
+	usart_send_data(REQUEST, data, 2);
+	unsigned char error = usart_receive_data();
+
+	// USART Checksum error
+	if (error != CODE_OK) return error;
+	if (msg_USART.type != CODE_OK) return msg_USART.type;
+	
+	lcd_clear();
+	lcd_setcursor(0, 1);
+	lcd_string("Deleting DTCs...");
+	lcd_setcursor(0, 2);
+	lcd_string("Done!");
+	_delay_ms(500);
+	return CODE_OK;
 }
 
 /*********************************************************************
